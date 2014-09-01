@@ -27,6 +27,18 @@ public:
 	MethodLocator(Type type, const char* interface, const char* method);
 	virtual ~MethodLocator() {}
 
+	Type getType() const {
+		return type_;
+	}
+
+	const char* getInterface() const {
+		return interface_.c_str();
+	}
+
+	const char* getMethod() const {
+		return method_.c_str();
+	}
+
 	bool matches(Message&);
 	virtual Message handle(Message&) = 0;
 

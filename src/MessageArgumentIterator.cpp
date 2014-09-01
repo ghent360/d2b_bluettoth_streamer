@@ -39,6 +39,12 @@ ContainerIterator BaseMessageIterator::openContainer(int type) {
 	return openContainer(type, (const char*)NULL);
 }
 
+BaseMessageIterator BaseMessageIterator::recurse() {
+	BaseMessageIterator result;
+	dbus_message_iter_recurse(&iter_, &result.iter_);
+	return result;
+}
+
 bool BaseMessageIterator::appendDictEntry(const char* key, const char* value) {
 	ContainerIterator dict = openContainer(DBUS_TYPE_DICT_ENTRY);
 	if (!dict.isValid()) {

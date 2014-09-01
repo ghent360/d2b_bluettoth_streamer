@@ -94,11 +94,35 @@ Message Connection::sendWithReplyAndBlock(const MethodBase& method, int timeout_
     return sendWithReplyAndBlock(msg, timeout_msec);
 }
 
+static void buildHandlerRule(const MethodLocator& handler, std::string* rule) {
+	rule->append("type='signal',interface='");
+	rule->append(handler.getInterface());
+	rule->append("',member='");
+	rule->append(handler.getMethod());
+	rule->append("'");
+}
+
 void Connection::addMethodHandler(MethodLocator* handler) {
+	if (handler->getType() == MethodLocator::Type::E_SIGNAL) {
+		DBusError err;
+		dbus_error_init(&err);
+		std::string rule;
+		buildHandlerRule(*handler, &rule);
+		dbus_bus_add_match(connection_, rule.c_str(), &err);
+		handleError(&err, __FUNCTION__, __LINE__);
+	}
 	handlers_.push_back(handler);
 }
 
 void Connection::removeMethodHandler(MethodLocator* handler) {
+	if (handler->getType() == MethodLocator::Type::E_SIGNAL) {
+		DBusError err;
+		dbus_error_init(&err);
+		std::string rule;
+		buildHandlerRule(*handler, &rule);
+		dbus_bus_remove_match(connection_, rule.c_str(), &err);
+		handleError(&err, __FUNCTION__, __LINE__);
+	}
 	handlers_.remove(handler);
 }
 

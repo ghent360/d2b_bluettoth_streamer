@@ -81,6 +81,7 @@ public:
 	ContainerIterator openContainer(int type, int signature);
 	ContainerIterator openContainer(int type);
 
+	BaseMessageIterator recurse();
 protected:
 	const char* getStringForType(int type);
 
