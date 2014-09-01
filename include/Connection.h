@@ -18,6 +18,7 @@
 namespace dbus {
 
 class Message;
+class MethodBase;
 
 class Connection {
 public:
@@ -28,9 +29,8 @@ public:
 	void flush();
 	void close();
 
-	int getBluetoothObjectPath(const std::string& device, std::string* path);
-
-	Message sendWithReplyAndBlock(Message& msg, int timeoutMsec);
+	Message sendWithReplyAndBlock(Message& msg, int timeout_msec);
+	Message sendWithReplyAndBlock(const MethodBase& method, int timeout_msec);
 
 	static int handleError(DBusError *err, const char *func, int line);
 private:

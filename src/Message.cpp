@@ -2,19 +2,22 @@
  * Message.cpp
  *
  *  Created on: Aug 31, 2014
- *      Author: vne-marti
+ *      Author: Venelin Efremov
+ *
+ *  Copyright (C) Venelin Efremov 2014
+ *  All rights reserved.
  */
 
 #include "Message.h"
 #include "Connection.h"
 #include "MessageArgumentIterator.h"
+#include "MethodBase.h"
 
 #include <glog/logging.h>
 
 namespace dbus {
 
-const std::string Message::EMPTY("");
-const std::string DBUS_ERROR_FAILED_MSG_NAME(DBUS_ERROR_FAILED);
+const char* DBUS_ERROR_FAILED_MSG_NAME = DBUS_ERROR_FAILED;
 
 Message::~Message() {
 	unref();
@@ -45,92 +48,93 @@ void Message::assign(const Message& other) {
 	}
 }
 
-static const char* getString(const std::string& str) {
-	if (str.empty()) {
-		return NULL;
-	}
-	return str.c_str();
-}
-
-int Message::forMethodCall(const std::string& destination,
-			const std::string& path,
-			const std::string& iface,
-			const std::string& method,
+bool Message::forMethodCall(const char* destination,
+			const char* path,
+			const char* iface,
+			const char* method,
 			Message *result) {
 	DBusError err;
 	DBusMessage *msg;
 
 	dbus_error_init(&err);
-	msg = dbus_message_new_method_call(getString(destination),
-			getString(path),
-			getString(iface),
-			getString(method));
+	msg = dbus_message_new_method_call(destination,
+			path,
+			iface,
+			method);
 	Connection::handleError(&err, __FUNCTION__, __LINE__);
 	if (msg != NULL) {
 		result->unref();
 		result->message_ = msg;
-		return 0;
+		return true;
 	}
-	return 1;
+	return false;
 }
 
-int Message::forMethodReturn(const Message& methodCall, Message* result) {
+bool Message::forMethodCall(const MethodBase& method, Message* result) {
+    return forMethodCall(method.destination(),
+    		method.path(),
+    		method.interface(),
+    		method.methodName(),
+    		result);
+}
+
+bool Message::forMethodReturn(const Message& method_call, Message* result) {
 	DBusError err;
 	DBusMessage *msg;
 
 	dbus_error_init(&err);
-	msg = dbus_message_new_method_return(methodCall.message_);
+	msg = dbus_message_new_method_return(method_call.message_);
 	Connection::handleError(&err, __FUNCTION__, __LINE__);
 	if (msg != NULL) {
 		result->unref();
 		result->message_ = msg;
-		return 0;
+		return true;
 	}
-	return 1;
+	return false;
 }
 
-int Message::forSignal(const std::string& path,
-			const std::string& iface,
-			const std::string& name,
+bool Message::forSignal(const char* path,
+			const char* iface,
+			const char* name,
 			Message* result) {
 	DBusError err;
 	DBusMessage *msg;
 
 	dbus_error_init(&err);
-	msg = dbus_message_new_signal(getString(path),
-			getString(iface),
-			getString(name));
+	msg = dbus_message_new_signal(path, iface, name);
 	Connection::handleError(&err, __FUNCTION__, __LINE__);
 	if (msg != NULL) {
 		result->unref();
 		result->message_ = msg;
-		return 0;
+		return true;
 	}
-	return 1;
+	return false;
 }
 
-int Message::forError(const Message& replyTo,
-			const std::string& name,
-			const std::string& message,
+bool Message::forError(const Message& reply_to,
+			const char* name,
+			const char* message,
 			Message* result) {
 	DBusError err;
 	DBusMessage *msg;
 
 	dbus_error_init(&err);
-	msg = dbus_message_new_error(replyTo.message_,
-			getString(name),
-			getString(message));
+	msg = dbus_message_new_error(reply_to.message_, name, message);
 	Connection::handleError(&err, __FUNCTION__, __LINE__);
 	if (msg != NULL) {
 		result->unref();
 		result->message_ = msg;
-		return 0;
+		return true;
 	}
-	return 1;
+	return false;
 }
 
 MessageArgumentIterator Message::argIterator() {
 	return MessageArgumentIterator(*this);
+}
+
+MessageArgumentBuilder Message::argBuilder() {
+	return MessageArgumentBuilder(*this);
 }
 
 } /* namespace dbus */

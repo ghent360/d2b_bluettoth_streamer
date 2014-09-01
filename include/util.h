@@ -2,7 +2,9 @@
  * util.h
  *
  *  Created on: Aug 30, 2014
- *      Author: vne-marti
+ *      Author: Venelin Efremov
+ *
+ *  Copyright (C) Venelin Efremov 2014
  */
 
 #ifndef UTIL_H_

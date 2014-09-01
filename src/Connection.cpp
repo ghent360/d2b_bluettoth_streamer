@@ -2,11 +2,15 @@
  * DbusConnection.cpp
  *
  *  Created on: Aug 30, 2014
- *      Author: vne-marti
+ *      Author: Venelin Efremov
+ *
+ *  Copyright (C) Venelin Efremov 2014
+ *  All rights reserved.
  */
 
 #include "Connection.h"
 #include "Message.h"
+#include "MethodBase.h"
 
 #include <glog/logging.h>
 
@@ -42,7 +46,8 @@ void Connection::flush() {
 
 int Connection::handleError (DBusError *err, const char *func, int line) {
     if (dbus_error_is_set (err)) {
-        LOG(ERROR) << "DBus error at " << func << "@" << line << " :" << err->message;
+        LOG(ERROR) << "DBus error at " << func << "@" << line << " :" <<
+        		err->message;
         dbus_error_free(err);
         return 1;
     }
@@ -65,14 +70,22 @@ int Connection::getSystemConnection(Connection* connection) {
     return 0;
 }
 
-Message Connection::sendWithReplyAndBlock(Message& msg, int timeoutMsec) {
+Message Connection::sendWithReplyAndBlock(Message& msg, int timeout_msec) {
 	DBusMessage* reply;
 	DBusError err;
 
 	dbus_error_init(&err);
-	reply = dbus_connection_send_with_reply_and_block(connection_, msg.msg(), timeoutMsec, &err);
+	reply = dbus_connection_send_with_reply_and_block(connection_,
+			msg.msg(),
+			timeout_msec,
+			&err);
 	handleError(&err, __FUNCTION__, __LINE__);
 	return reply;
+}
+
+Message Connection::sendWithReplyAndBlock(const MethodBase& method, int timeout_msec) {
+    Message msg = method.msg();
+    return sendWithReplyAndBlock(msg, timeout_msec);
 }
 
 } /* namespace dbus */

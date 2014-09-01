@@ -2,7 +2,10 @@
  * Message.h
  *
  *  Created on: Aug 31, 2014
- *      Author: vne-marti
+ *      Author: Venelin Efremov
+ *
+ *  Copyright (C) Venelin Efremov 2014
+ *  All rights reserved.
  */
 
 #ifndef MESSAGE_H_
@@ -14,7 +17,9 @@
 
 namespace dbus {
 
+class MessageArgumentBuilder;
 class MessageArgumentIterator;
+class MethodBase;
 
 class Message {
 public:
@@ -22,44 +27,47 @@ public:
 	Message(const Message& other);
 	virtual ~Message();
 
-	static int forMethodCall(const std::string& destination,
-			const std::string& path,
-			const std::string& iface,
-			const std::string& method,
+	static bool forMethodCall(const MethodBase& method, Message* result);
+
+	static bool forMethodCall(const char* destination,
+			const char* path,
+			const char* iface,
+			const char* method,
 			Message* result);
 
-	static int forMethodCall(const std::string& destination,
-			const std::string& path,
-			const std::string& method,
+	static bool forMethodCall(const char* destination,
+			const char* path,
+			const char* method,
 			Message* result) {
-		return forMethodCall(destination, path, EMPTY, method, result);
+		return forMethodCall(destination, path, NULL, method, result);
 	}
 
-	static int forMethodCall(const std::string& path,
-			const std::string& method,
+	static bool forMethodCall(const char* path,
+			const char* method,
 			Message* result) {
-		return forMethodCall(EMPTY, path, method, result);
+		return forMethodCall(NULL, path, method, result);
 	}
 
-	static int forMethodReturn(const Message& methodCall, Message* result);
+	static bool forMethodReturn(const Message& method_call, Message* result);
 
-	static int forSignal(const std::string& path,
-			const std::string& iface,
-			const std::string& name,
+	static bool forSignal(const char* path,
+			const char* iface,
+			const char* name,
 			Message* result);
 
-	static int forError(const Message& replyTo,
-			const std::string& name,
-			const std::string& message,
+	static bool forError(const Message& reply_to,
+			const char* name,
+			const char* message,
 			Message* result);
 
-	static int forError(const Message& replyTo,
-			const std::string& message,
+	static bool forError(const Message& reply_to,
+			const char* message,
 			Message* result) {
-		return forError(replyTo, DBUS_ERROR_FAILED_MSG_NAME, message, result);
+		return forError(reply_to, DBUS_ERROR_FAILED_MSG_NAME, message, result);
 	}
 
 	MessageArgumentIterator argIterator();
+	MessageArgumentBuilder argBuilder();
 
 	DBusMessage* msg() {
 		return message_;
@@ -72,8 +80,7 @@ public:
 	}
 
 private:
-	const static std::string EMPTY;
-	const static std::string DBUS_ERROR_FAILED_MSG_NAME;
+	const static char* DBUS_ERROR_FAILED_MSG_NAME;
 
 	void unref();
 

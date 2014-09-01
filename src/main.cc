@@ -2,21 +2,31 @@
  * main.cc
  *
  *  Created on: Aug 30, 2014
- *      Author: Venelin EFremov
+ *      Author: Venelin Efremov
  *
  * Copyright (C) Venelin Efremov 2014
  * All rights reserved.
  */
 
+
+#include "BluezManager.h"
+#include "BluezMedia.h"
 #include "Connection.h"
 #include "Message.h"
 #include "MessageArgumentIterator.h"
+#include "ObjectPath.h"
 
 #include <dbus/dbus.h>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+#include <stdint.h>
+#include "a2dp-codecs.h"
+#include "ipc.h"
 
 //DEFINE_int32(end, 1000, "The last record to read");
+
+#define A2DP_SINK_UUID        "0000110b-0000-1000-8000-00805f9b34fb"
+#define A2DP_SINK_ENDPOINT    "/MediaEndpoint/A2DPSink"
 
 class Application {
 public:
@@ -27,59 +37,55 @@ public:
 		return dbus::Connection::getSystemConnection(&conn_);
 	}
 
-	int getAdapterPath(const std::string& device, std::string* path) {
-	    dbus::Message msg;
-	    dbus::Message reply;
-	    std::string s;
-	    std::string methodName = FIND_ADAPTER;
+	bool getAdapterPath(const char* device, dbus::ObjectPath* path) {
+		dbus::BluezManager bluezManager(&conn_);
 
 	    LOG(INFO) << "Getting object path for adapter " << device;
 
 	    // create a new method call msg
-	    if (device.empty()) {
-	    	methodName = DEFAULT_ADAPTER;
-	    }
-	    dbus::Message::forMethodCall("org.bluez",  // Destination
-	    		"/",                               // object to call on
-	    		"org.bluez.Manager",               // interface to call on
-	    		methodName,                        // method name
-	    		&msg);
-
-	    // append arguments
-	    dbus::MessageArgumentIterator iter = msg.argIterator();
-	    if (!device.empty()) {
-	    	iter.append(device);
-	    }
-
-	    // send message and wait for reply, -1 means wait forever
-	    reply = conn_.sendWithReplyAndBlock(msg, -1);
-	    if (!reply.msg()) {
-	        LOG(ERROR) << "Reply Null\n";
-	        return 1;
-	    }
-
-	    iter = reply.argIterator();
-	    // read the parameters
-	    if (iter.hasArgs() && DBUS_TYPE_OBJECT_PATH == iter.getArgumentType()) {
-	        s = iter.getObjectPath();
+	    if (device == NULL || strlen(device) == 0) {
+	    	*path = bluezManager.defaultAdapter();
 	    } else {
-	    	return 1;
+	    	*path = bluezManager.findAdapter(device);
 	    }
+	    return path->isValid();
+	}
 
-	    // free reply and close connection
-	    LOG (INFO) << "Object path for " << device << " is " << s;
-	    *path = s;
-	    return 0;
+	bool registerSinkEndpoint(const dbus::ObjectPath& adapter) {
+		dbus::BluezMedia bluezMedia(&conn_, adapter);
+
+		a2dp_sbc_t capabilities;
+		capabilities.channel_mode = BT_A2DP_CHANNEL_MODE_MONO | BT_A2DP_CHANNEL_MODE_DUAL_CHANNEL |
+									BT_A2DP_CHANNEL_MODE_STEREO | BT_A2DP_CHANNEL_MODE_JOINT_STEREO;
+		capabilities.frequency = BT_SBC_SAMPLING_FREQ_16000 | BT_SBC_SAMPLING_FREQ_32000 |
+								 BT_SBC_SAMPLING_FREQ_44100 | BT_SBC_SAMPLING_FREQ_48000;
+		capabilities.allocation_method = BT_A2DP_ALLOCATION_SNR | BT_A2DP_ALLOCATION_LOUDNESS;
+		capabilities.subbands = BT_A2DP_SUBBANDS_4 | BT_A2DP_SUBBANDS_8;
+		capabilities.block_length = BT_A2DP_BLOCK_LENGTH_4 | BT_A2DP_BLOCK_LENGTH_8 |
+									BT_A2DP_BLOCK_LENGTH_12 | BT_A2DP_BLOCK_LENGTH_16;
+		capabilities.min_bitpool = MIN_BITPOOL;
+		capabilities.max_bitpool = MAX_BITPOOL;
+
+		return bluezMedia.registerEndpoint(SINK_ENDPOINT,
+				SINK_UUID,
+				A2DP_CODEC_SBC,
+				&capabilities,
+				sizeof(capabilities));
+	}
+
+	bool unregisterSinkEndpoint(const dbus::ObjectPath& adapter) {
+		dbus::BluezMedia bluezMedia(&conn_, adapter);
+		return bluezMedia.unregisterEndpoint(SINK_ENDPOINT);
 	}
 private:
-	const static std::string FIND_ADAPTER;
-	const static std::string DEFAULT_ADAPTER;
+	const static dbus::ObjectPath SINK_ENDPOINT;
+	const static char* SINK_UUID;
 
 	dbus::Connection conn_;
 };
 
-const std::string Application::FIND_ADAPTER("FindAdapter");
-const std::string Application::DEFAULT_ADAPTER("DefaultAdapter");
+const dbus::ObjectPath Application::SINK_ENDPOINT(A2DP_SINK_ENDPOINT);
+const char* Application::SINK_UUID = A2DP_SINK_UUID;
 
 int main(int argc, char *argv[]) {
 	gflags::SetUsageMessage("Bluetooth audio streaming daemon");
@@ -89,9 +95,10 @@ int main(int argc, char *argv[]) {
 	dbus_threads_init_default();
 	Application app;
 	app.connectBus();
-	std::string path;
+	dbus::ObjectPath path;
 	app.getAdapterPath("", &path);
-
+	app.registerSinkEndpoint(path);
+    app.unregisterSinkEndpoint(path);
 	LOG(INFO) << "Exiting audio daemon";
 	return 0;
 }
