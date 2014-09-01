@@ -13,7 +13,7 @@
 #include "BluezManager.h"
 #include "BluezMedia.h"
 #include "Connection.h"
-#include "MediaPlayerPropertyChanged.h"
+#include "MediaEndpoint.h"
 #include "Message.h"
 #include "MessageArgumentIterator.h"
 #include "ObjectPath.h"
@@ -81,7 +81,9 @@ public:
 	}
 
 	void loop() {
-		conn_.addMethodHandler(new dbus::AudioSourcePropertyChanged());
+		dbus::MediaEndpoint mep;
+		mep.registerMethods(conn_);
+		conn_.addMethodHandler(new dbus::AudioSourcePropertyChanged(), NULL);
 		conn_.mainLoop();
 	}
 private:
@@ -104,9 +106,9 @@ int main(int argc, char *argv[]) {
 	app.connectBus();
 	dbus::ObjectPath path;
 	app.getAdapterPath("", &path);
-	//app.registerSinkEndpoint(path);
+	app.registerSinkEndpoint(path);
 	app.loop();
-    //app.unregisterSinkEndpoint(path);
+    app.unregisterSinkEndpoint(path);
 	LOG(INFO) << "Exiting audio daemon";
 	return 0;
 }

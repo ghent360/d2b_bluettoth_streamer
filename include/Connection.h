@@ -32,8 +32,8 @@ public:
 	void close();
 
 	Message sendWithReplyAndBlock(const MethodBase& method, int timeout_msec);
-	void addMethodHandler(MethodLocator* handler);
-	void removeMethodHandler(MethodLocator* handler);
+	void addMethodHandler(MethodLocator* handler, void* ctx);
+	void removeMethodHandler(const MethodLocator& handler);
 
 	void mainLoop();
 	void requestTermination() {
@@ -44,9 +44,14 @@ public:
 private:
 	Message sendWithReplyAndBlock(Message& msg, int timeout_msec);
 
+	struct HandlerTuple {
+		MethodLocator* h;
+		void* c;
+	};
+
 	DBusConnection *connection_;
 	bool shared_;
-    std::list<MethodLocator*> handlers_;
+    std::list<HandlerTuple> handlers_;
     bool termination_requested_;
 
 	DISALLOW_COPY_AND_ASSIGN(Connection);

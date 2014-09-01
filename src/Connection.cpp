@@ -31,7 +31,7 @@ Connection::~Connection() {
 
 void Connection::close() {
 	for (auto handler : handlers_) {
-		delete handler;
+		delete handler.h;
 	}
 	handlers_.clear();
 	if (connection_) {
@@ -102,7 +102,7 @@ static void buildHandlerRule(const MethodLocator& handler, std::string* rule) {
 	rule->append("'");
 }
 
-void Connection::addMethodHandler(MethodLocator* handler) {
+void Connection::addMethodHandler(MethodLocator* handler, void* ctx) {
 	if (handler->getType() == MethodLocator::Type::E_SIGNAL) {
 		DBusError err;
 		dbus_error_init(&err);
@@ -111,19 +111,28 @@ void Connection::addMethodHandler(MethodLocator* handler) {
 		dbus_bus_add_match(connection_, rule.c_str(), &err);
 		handleError(&err, __FUNCTION__, __LINE__);
 	}
-	handlers_.push_back(handler);
+	HandlerTuple ht;
+	ht.h = handler;
+	ht.c = ctx;
+	handlers_.push_back(ht);
 }
 
-void Connection::removeMethodHandler(MethodLocator* handler) {
-	if (handler->getType() == MethodLocator::Type::E_SIGNAL) {
+void Connection::removeMethodHandler(const MethodLocator& handler) {
+	if (handler.getType() == MethodLocator::Type::E_SIGNAL) {
 		DBusError err;
 		dbus_error_init(&err);
 		std::string rule;
-		buildHandlerRule(*handler, &rule);
+		buildHandlerRule(handler, &rule);
 		dbus_bus_remove_match(connection_, rule.c_str(), &err);
 		handleError(&err, __FUNCTION__, __LINE__);
 	}
-	handlers_.remove(handler);
+	for (auto it = handlers_.begin(); it != handlers_.end(); ++it) {
+		if (*it->h == handler) {
+			delete it->h;
+			handlers_.erase(it);
+			break;
+		}
+	}
 }
 
 void Connection::mainLoop() {
@@ -136,8 +145,8 @@ void Connection::mainLoop() {
     	while (msg.msg() != NULL && !termination_requested_) {
     		Message reply;
     		for (auto handler : handlers_) {
-    			if (handler->matches(msg)) {
-                    reply = handler->handle(msg);
+    			if (handler.h->matches(msg)) {
+                    reply = handler.h->handle(msg, handler.c);
                     break;
     			}
     		}

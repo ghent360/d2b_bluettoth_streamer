@@ -19,7 +19,7 @@ class AudioSourcePropertyChanged : public MethodLocator {
 public:
 	AudioSourcePropertyChanged();
 
-	virtual Message handle(Message&);
+	virtual Message handle(Message&, void* ctx);
 
 private:
 };

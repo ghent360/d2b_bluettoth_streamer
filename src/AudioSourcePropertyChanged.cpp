@@ -23,7 +23,7 @@ AudioSourcePropertyChanged::AudioSourcePropertyChanged()
     		"PropertyChanged") {
 }
 
-Message AudioSourcePropertyChanged::handle(Message& msg) {
+Message AudioSourcePropertyChanged::handle(Message& msg, void* ctx) {
 	MessageArgumentIterator it = msg.argIterator();
 	if (it.hasArgs()) {
 		const char* property_name = it.getString();

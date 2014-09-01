@@ -69,6 +69,10 @@ public:
 		return dbus_message_iter_get_arg_type(&iter_);
 	}
 
+	unsigned char getByte();
+	unsigned short getWord();
+	bool getBool();
+
 	const char* getString() {
 		return getStringForType(DBUS_TYPE_STRING);
 	}
@@ -76,6 +80,8 @@ public:
 	ObjectPath getObjectPath() {
 		return ObjectPath(getStringForType(DBUS_TYPE_OBJECT_PATH));
 	}
+
+	bool getByteArray(char** buffer, size_t* len);
 
 	ContainerIterator openContainer(int type, const char* signature);
 	ContainerIterator openContainer(int type, int signature);

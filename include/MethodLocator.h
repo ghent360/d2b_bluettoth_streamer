@@ -11,8 +11,6 @@
 #ifndef METHODLOCATOR_H_
 #define METHODLOCATOR_H_
 
-#include <string>
-
 namespace dbus {
 
 class Message;
@@ -32,21 +30,21 @@ public:
 	}
 
 	const char* getInterface() const {
-		return interface_.c_str();
+		return interface_;
 	}
 
 	const char* getMethod() const {
-		return method_.c_str();
+		return method_;
 	}
 
 	bool matches(Message&);
-	virtual Message handle(Message&) = 0;
+	virtual Message handle(Message&, void* ctx) = 0;
 
 	bool operator == (const MethodLocator &);
 private:
 	Type type_;
-	std::string interface_;
-	std::string method_;
+	const char* interface_;
+	const char* method_;
 };
 
 } /* namespace dbus */

@@ -26,6 +26,59 @@ const char* BaseMessageIterator::getStringForType(int type) {
 	return str;
 }
 
+unsigned char BaseMessageIterator::getByte() {
+	int arg_type = getArgumentType();
+	if (arg_type != DBUS_TYPE_BYTE) {
+		LOG(ERROR) << "Invalid argument type got " << arg_type <<
+				" expected DBUS_TYPE_BYTE";
+		return 0;
+	}
+	dbus_int32_t* value;
+	dbus_message_iter_get_basic(&iter_, &value);
+	return (unsigned char)*value;
+}
+
+unsigned short BaseMessageIterator::getWord() {
+	int arg_type = getArgumentType();
+	if (arg_type != DBUS_TYPE_UINT16) {
+		LOG(ERROR) << "Invalid argument type got " << arg_type <<
+				" expected DBUS_TYPE_UINT16";
+		return 0;
+	}
+	dbus_int32_t* value;
+	dbus_message_iter_get_basic(&iter_, &value);
+	return (unsigned short)*value;
+}
+
+bool BaseMessageIterator::getBool() {
+	int arg_type = getArgumentType();
+	if (arg_type != DBUS_TYPE_BOOLEAN) {
+		LOG(ERROR) << "Invalid argument type got " << arg_type <<
+				" expected DBUS_TYPE_BOOLEAN";
+		return false;
+	}
+	dbus_int32_t* value;
+	dbus_message_iter_get_basic(&iter_, &value);
+	return *value == TRUE;
+}
+
+bool BaseMessageIterator::getByteArray(char** buffer, size_t* len) {
+	int arg_type = getArgumentType();
+	if (arg_type != DBUS_TYPE_ARRAY) {
+		LOG(ERROR) << "Invalid argument type got " << arg_type <<
+				" expected DBUS_TYPE_ARRAY";
+		return false;
+	}
+	BaseMessageIterator itarray = recurse();
+	char* tmp_buffer;
+	int size;
+	dbus_message_iter_get_fixed_array(&itarray.iter_, &tmp_buffer, &size);
+	*buffer = new char[size];
+	memcpy(*buffer, tmp_buffer, size);
+	*len = size;
+	return true;
+}
+
 ContainerIterator BaseMessageIterator::openContainer(int type,
 		const char* signature) {
 	return ContainerIterator(*this, type, signature);

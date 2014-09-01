@@ -13,6 +13,7 @@
 #include "Message.h"
 
 #include <dbus/dbus.h>
+#include <string.h>
 
 namespace dbus {
 
@@ -27,18 +28,18 @@ MethodLocator::MethodLocator(Type type,
 bool MethodLocator::matches(Message& msg) {
     if (type_ == E_SIGNAL) {
     	return dbus_message_is_signal(msg.msg(),
-    			interface_.c_str(),
-    			method_.c_str()) == TRUE;
+    			interface_,
+    			method_) == TRUE;
     }
 	return dbus_message_is_method_call(msg.msg(),
-			interface_.c_str(),
-			method_.c_str()) == TRUE;
+			interface_,
+			method_) == TRUE;
 }
 
 bool MethodLocator::operator == (const MethodLocator &other) {
     return type_ == other.type_ &&
-    		interface_ == other.interface_ &&
-    		method_ == other.method_;
+    		strcmp(interface_, other.interface_) == 0 &&
+    		strcmp(method_, other.method_) == 0;
 }
 
 } /* namespace dbus */
