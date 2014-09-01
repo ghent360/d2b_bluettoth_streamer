@@ -11,6 +11,7 @@
 #include "Connection.h"
 #include "Message.h"
 #include "MethodBase.h"
+#include "MethodLocator.h"
 
 #include <glog/logging.h>
 
@@ -18,7 +19,8 @@ namespace dbus {
 
 Connection::Connection(DBusConnection* connection, bool shared)
     : connection_(connection),
-      shared_(shared) {
+      shared_(shared),
+      termination_requested_(false) {
 }
 
 Connection::~Connection() {
@@ -28,6 +30,10 @@ Connection::~Connection() {
 }
 
 void Connection::close() {
+	for (auto handler : handlers_) {
+		delete handler;
+	}
+	handlers_.clear();
 	if (connection_) {
 		flush();
 		if (shared_) {
@@ -88,4 +94,35 @@ Message Connection::sendWithReplyAndBlock(const MethodBase& method, int timeout_
     return sendWithReplyAndBlock(msg, timeout_msec);
 }
 
+void Connection::addMethodHandler(MethodLocator* handler) {
+	handlers_.push_back(handler);
+}
+
+void Connection::removeMethodHandler(MethodLocator* handler) {
+	handlers_.remove(handler);
+}
+
+void Connection::mainLoop() {
+	termination_requested_ = false;
+    while (!termination_requested_) {
+    	if (dbus_connection_read_write (connection_, 200) == FALSE) {
+    		break;
+    	}
+    	Message msg(dbus_connection_pop_message (connection_));
+    	while (msg.msg() != NULL && !termination_requested_) {
+    		Message reply;
+    		for (auto handler : handlers_) {
+    			if (handler->matches(msg)) {
+                    reply = handler->handle(msg);
+                    break;
+    			}
+    		}
+    		if (reply.msg() != NULL) {
+                uint32_t serial = msg.getSerial();
+    			dbus_connection_send(connection_, reply.msg(), &serial);
+    		}
+    		msg.takeOwnership(dbus_connection_pop_message (connection_));
+    	}
+    }
+}
 } /* namespace dbus */

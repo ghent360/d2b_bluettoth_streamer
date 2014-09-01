@@ -74,11 +74,16 @@ public:
 	}
 
 	void assign(const Message& other);
+	void takeOwnership(DBusMessage* message);
+
 	Message& operator = (const Message& other) {
 		assign(other);
 		return *this;
 	}
 
+	unsigned int getSerial() {
+        return dbus_message_get_serial(message_);
+	}
 private:
 	const static char* DBUS_ERROR_FAILED_MSG_NAME;
 

@@ -13,12 +13,14 @@
 
 #include "util.h"
 #include <dbus/dbus.h>
+#include <list>
 #include <string>
 
 namespace dbus {
 
 class Message;
 class MethodBase;
+class MethodLocator;
 
 class Connection {
 public:
@@ -29,13 +31,23 @@ public:
 	void flush();
 	void close();
 
-	Message sendWithReplyAndBlock(Message& msg, int timeout_msec);
 	Message sendWithReplyAndBlock(const MethodBase& method, int timeout_msec);
+	void addMethodHandler(MethodLocator* handler);
+	void removeMethodHandler(MethodLocator* handler);
+
+	void mainLoop();
+	void requestTermination() {
+		termination_requested_ = true;
+	}
 
 	static int handleError(DBusError *err, const char *func, int line);
 private:
+	Message sendWithReplyAndBlock(Message& msg, int timeout_msec);
+
 	DBusConnection *connection_;
 	bool shared_;
+    std::list<MethodLocator*> handlers_;
+    bool termination_requested_;
 
 	DISALLOW_COPY_AND_ASSIGN(Connection);
 };

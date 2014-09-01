@@ -48,6 +48,11 @@ void Message::assign(const Message& other) {
 	}
 }
 
+void Message::takeOwnership(DBusMessage* message) {
+	unref();
+	message_ = message;
+}
+
 bool Message::forMethodCall(const char* destination,
 			const char* path,
 			const char* iface,

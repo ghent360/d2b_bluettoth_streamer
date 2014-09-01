@@ -77,6 +77,10 @@ public:
 		dbus::BluezMedia bluezMedia(&conn_, adapter);
 		return bluezMedia.unregisterEndpoint(SINK_ENDPOINT);
 	}
+
+	void loop() {
+		conn_.mainLoop();
+	}
 private:
 	const static dbus::ObjectPath SINK_ENDPOINT;
 	const static char* SINK_UUID;
@@ -98,6 +102,7 @@ int main(int argc, char *argv[]) {
 	dbus::ObjectPath path;
 	app.getAdapterPath("", &path);
 	app.registerSinkEndpoint(path);
+	app.loop();
     app.unregisterSinkEndpoint(path);
 	LOG(INFO) << "Exiting audio daemon";
 	return 0;
