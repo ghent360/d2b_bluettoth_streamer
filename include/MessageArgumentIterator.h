@@ -82,6 +82,7 @@ public:
 	}
 
 	bool getByteArray(char** buffer, size_t* len);
+	int getFileDescriptor();
 
 	ContainerIterator openContainer(int type, const char* signature);
 	ContainerIterator openContainer(int type, int signature);

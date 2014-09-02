@@ -13,8 +13,6 @@
 
 #include "util.h"
 
-#include <string>
-
 namespace dbus {
 
 class Connection;

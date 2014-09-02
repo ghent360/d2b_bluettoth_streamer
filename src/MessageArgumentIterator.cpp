@@ -62,6 +62,18 @@ bool BaseMessageIterator::getBool() {
 	return *value == TRUE;
 }
 
+int BaseMessageIterator::getFileDescriptor() {
+	int arg_type = getArgumentType();
+	if (arg_type != DBUS_TYPE_UNIX_FD) {
+		LOG(ERROR) << "Invalid argument type got " << arg_type <<
+				" expected DBUS_TYPE_UNIX_FD";
+		return 0;
+	}
+	dbus_int32_t* value;
+	dbus_message_iter_get_basic(&iter_, &value);
+	return *value;
+}
+
 bool BaseMessageIterator::getByteArray(char** buffer, size_t* len) {
 	int arg_type = getArgumentType();
 	if (arg_type != DBUS_TYPE_ARRAY) {

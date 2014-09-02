@@ -37,7 +37,7 @@ public:
 		return method_;
 	}
 
-	bool matches(Message&);
+	virtual bool matches(Message&);
 	virtual Message handle(Message&, void* ctx) = 0;
 
 	bool operator == (const MethodLocator &);
