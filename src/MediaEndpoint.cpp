@@ -130,6 +130,9 @@ void MediaEndpointInterface::unregisterMethods(Connection& connection) {
     connection.removeMethodHandler(MediaEndpointRelease());
 }
 
+MediaEndpoint::MediaEndpoint() : transport_config_valid_(false) {
+
+}
 /*****************//**
  * Helper to calculate the optimum bitpool, given the sampling frequency,
  * and number of channels.
@@ -251,14 +254,20 @@ bool MediaEndpoint::selectConfiguration(void* capabilities,
 void MediaEndpoint::setConfiguration(const ObjectPath& transport,
 		const MediaTransportProperties& properties) {
 	LOG(INFO) << "MediaEndpoint::setConfiguration transport=" << transport.path();
+	transport_path_ = transport;
+	transport_properties_ = properties;
+	transport_config_valid_ = true;
+	properties.dump();
 }
 
 void MediaEndpoint::clearConfiguration(const ObjectPath& transport) {
 	LOG(INFO) << "MediaEndpoint::clearConfiguration";
+	transport_config_valid_ = false;
 }
 
 void MediaEndpoint::release() {
 	LOG(INFO) << "MediaEndpoint::release";
+	transport_config_valid_ = false;
 }
 
 } /* namespace dbus */

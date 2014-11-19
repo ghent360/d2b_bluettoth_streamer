@@ -11,14 +11,15 @@
 #ifndef MEDIAENDPOINT_H_
 #define MEDIAENDPOINT_H_
 
+#include "MediaTransportProperties.h"
 #include "ObjectPath.h"
+#include "util.h"
 
 #include <string>
 
 namespace dbus {
 
 class Connection;
-class MediaTransportProperties;
 
 class MediaEndpointInterface {
 protected:
@@ -54,8 +55,16 @@ protected:
 
 class MediaEndpoint : public MediaEndpointInterface {
 public:
-	MediaEndpoint() {}
+	MediaEndpoint();
 	virtual ~MediaEndpoint() {}
+
+	bool isTransportConfigValid() const {
+		return transport_config_valid_;
+	}
+
+	const ObjectPath& getTransportPath() const {
+		return transport_path_;
+	}
 
 protected:
 	virtual bool selectConfiguration(void* capabilities,
@@ -67,6 +76,13 @@ protected:
 			const MediaTransportProperties& properties);
 	virtual void clearConfiguration(const ObjectPath& transport);
 	virtual void release();
+
+private:
+	bool transport_config_valid_;
+	ObjectPath transport_path_;
+	MediaTransportProperties transport_properties_;
+
+	DISALLOW_COPY_AND_ASSIGN(MediaEndpoint);
 };
 
 } /* namespace dbus */

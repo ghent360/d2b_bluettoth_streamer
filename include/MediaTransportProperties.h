@@ -23,23 +23,33 @@ class BaseMessageIterator;
 class MediaTransportProperties {
 public:
 	MediaTransportProperties();
+	MediaTransportProperties(const MediaTransportProperties& other) {
+		assign(other);
+	}
 	~MediaTransportProperties();
 
 	void parseDictionary(BaseMessageIterator* itprop);
 
-private:
-    ObjectPath device;
-    std::string uuid;
-    int codec_id;
-    char* configuration;
-    size_t configuration_len;
-    unsigned short delay;
-    bool nrec;
-    bool inbound_ringtones;
-    std::string routing;
-    unsigned short volume;
+	MediaTransportProperties& operator = (
+			const MediaTransportProperties& other) {
+		assign(other);
+		return *this;
+	}
 
-    DISALLOW_COPY_AND_ASSIGN(MediaTransportProperties);
+	void dump() const;
+private:
+	void assign(const MediaTransportProperties&);
+
+    ObjectPath     device_;
+    std::string    uuid_;
+    int            codec_id_;
+    uint8_t*       configuration_;
+    size_t         configuration_len_;
+    unsigned short delay_;
+    bool           nrec_;
+    bool           inbound_ringtones_;
+    std::string    routing_;
+    unsigned short volume_;
 };
 
 } /* namespace dbus */

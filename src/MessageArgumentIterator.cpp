@@ -74,7 +74,7 @@ int BaseMessageIterator::getFileDescriptor() {
 	return *value;
 }
 
-bool BaseMessageIterator::getByteArray(char** buffer, size_t* len) {
+bool BaseMessageIterator::getByteArray(uint8_t** buffer, size_t* len) {
 	int arg_type = getArgumentType();
 	if (arg_type != DBUS_TYPE_ARRAY) {
 		LOG(ERROR) << "Invalid argument type got " << arg_type <<
@@ -82,10 +82,10 @@ bool BaseMessageIterator::getByteArray(char** buffer, size_t* len) {
 		return false;
 	}
 	BaseMessageIterator itarray = recurse();
-	char* tmp_buffer;
+	uint8_t* tmp_buffer;
 	int size;
 	dbus_message_iter_get_fixed_array(&itarray.iter_, &tmp_buffer, &size);
-	*buffer = new char[size];
+	*buffer = new uint8_t[size];
 	memcpy(*buffer, tmp_buffer, size);
 	*len = size;
 	return true;

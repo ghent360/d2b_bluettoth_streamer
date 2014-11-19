@@ -11,6 +11,7 @@
 #include "MediaTransportProperties.h"
 #include "MessageArgumentIterator.h"
 
+#include <glog/logging.h>
 #include <string.h>
 
 namespace dbus {
@@ -26,19 +27,37 @@ const char* PROP_ROUTING = "Routing";
 const char* PROP_VOLUME = "Volume";
 
 MediaTransportProperties::MediaTransportProperties()
-    : codec_id(0),
-      configuration(NULL),
-      configuration_len(0),
-      delay(0),
-      nrec(false),
-      inbound_ringtones(false),
-      volume(0) {
+    : codec_id_(0),
+      configuration_(NULL),
+      configuration_len_(0),
+      delay_(0),
+      nrec_(false),
+      inbound_ringtones_(false),
+      volume_(0) {
 }
 
 MediaTransportProperties::~MediaTransportProperties() {
-	if (configuration) {
-		delete [] configuration;
+	if (configuration_) {
+		delete [] configuration_;
 	}
+}
+
+void MediaTransportProperties::assign(const MediaTransportProperties& other) {
+	if (configuration_) {
+		delete [] configuration_;
+		configuration_ = NULL;
+	}
+	device_ = other.device_;
+    uuid_ = other.uuid_;
+    codec_id_ = other.codec_id_;
+    configuration_ = new uint8_t[other.configuration_len_];
+    memcpy(configuration_, other.configuration_, other.configuration_len_);
+    configuration_len_ = other.configuration_len_;
+    delay_ = other.delay_;
+    nrec_ = other.nrec_;
+    inbound_ringtones_ = other.inbound_ringtones_;
+    routing_ = other.routing_;
+    volume_ = other.volume_;
 }
 
 void MediaTransportProperties::parseDictionary(BaseMessageIterator* itprop) {
@@ -49,26 +68,37 @@ void MediaTransportProperties::parseDictionary(BaseMessageIterator* itprop) {
     	itentry.next();
     	BaseMessageIterator itvalue = itentry.recurse();
     	if (strcmp(key, PROP_DEVICE) == 0) {
-    		device = itvalue.getObjectPath();
+    		device_ = itvalue.getObjectPath();
     	} else if (strcmp(key, PROP_CODEC) == 0) {
-    		codec_id = itvalue.getByte();
+    		codec_id_ = itvalue.getByte();
     	} else if (strcmp(key, PROP_UUID) == 0) {
-    		uuid = itvalue.getString();
+    		uuid_ = itvalue.getString();
     	} else if (strcmp(key, PROP_CONFIGURATION) == 0) {
-            itvalue.getByteArray(&configuration, &configuration_len);
+            itvalue.getByteArray(&configuration_, &configuration_len_);
     	} else if (strcmp(key, PROP_DELAY) == 0) {
-    		delay = itvalue.getWord();
+    		delay_ = itvalue.getWord();
     	} else if (strcmp(key, PROP_NREC) == 0) {
-    		nrec = itvalue.getBool();
+    		nrec_ = itvalue.getBool();
     	} else if (strcmp(key, PROP_INBOUND_RINGTONE) == 0) {
-    		inbound_ringtones = itvalue.getBool();
+    		inbound_ringtones_ = itvalue.getBool();
     	} else if (strcmp(key, PROP_ROUTING) == 0) {
-    		routing = itvalue.getString();
+    		routing_ = itvalue.getString();
     	} else if (strcmp(key, PROP_VOLUME) == 0) {
-    		volume = itvalue.getWord();
+    		volume_ = itvalue.getWord();
     	}
     	itprop->next();
     }
+}
+
+void MediaTransportProperties::dump() const {
+    LOG(INFO) << "device_:" << device_.path();
+    LOG(INFO) << "uuid_:" << uuid_;
+    LOG(INFO) << "codec_id_:" << codec_id_;
+    LOG(INFO) << "delay_:" << delay_;
+    LOG(INFO) << "nrec_:" << nrec_;
+    LOG(INFO) << "inbound_ringtones_:" << inbound_ringtones_;
+    LOG(INFO) << "routing_:" << routing_;
+    LOG(INFO) << "volume_:" << volume_;
 }
 
 } /* namespace dbus */

@@ -20,6 +20,7 @@ class Connection;
 class MediaTransportProperties;
 
 class MediaTransport {
+public:
 	MediaTransport(Connection* connection, const ObjectPath& path)
 	    : connection_(connection),
 	      path_(path) {

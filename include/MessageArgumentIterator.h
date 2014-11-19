@@ -81,7 +81,7 @@ public:
 		return ObjectPath(getStringForType(DBUS_TYPE_OBJECT_PATH));
 	}
 
-	bool getByteArray(char** buffer, size_t* len);
+	bool getByteArray(uint8_t** buffer, size_t* len);
 	int getFileDescriptor();
 
 	ContainerIterator openContainer(int type, const char* signature);

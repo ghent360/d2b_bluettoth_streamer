@@ -9,7 +9,7 @@
  */
 
 
-#include "AudioSourcePropertyChanged.h"
+#include <AudioSource.h>
 #include "BluezManager.h"
 #include "BluezMedia.h"
 #include "Connection.h"
@@ -83,7 +83,8 @@ public:
 	void loop() {
 		dbus::MediaEndpoint mep;
 		dbus::MediaEndpointInterface::registerMethods(conn_, &mep);
-		conn_.addMethodHandler(new dbus::AudioSourcePropertyChanged(), NULL);
+		dbus::AudioSource asrc(&conn_, mep);
+		dbus::AudioSourceInterface::registerMethods(conn_, &asrc);
 		conn_.mainLoop();
 	}
 private:
