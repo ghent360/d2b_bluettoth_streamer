@@ -144,11 +144,19 @@ void Connection::mainLoop() {
     	Message msg(dbus_connection_pop_message (connection_));
     	while (msg.msg() != NULL && !termination_requested_) {
     		Message reply;
+    		bool handled = false;
     		for (auto handler : handlers_) {
     			if (handler.h->matches(msg)) {
                     reply = handler.h->handle(msg, handler.c);
+                    handled = true;
                     break;
     			}
+    		}
+    		if (!handled) {
+    			LOG(WARNING) << "Message not handled: "
+    					" type = " << dbus_message_get_type(msg.msg()) << " "
+						<< dbus_message_get_interface(msg.msg()) << "::"
+						<< dbus_message_get_member (msg.msg());
     		}
     		if (reply.msg() != NULL) {
                 uint32_t serial = msg.getSerial();

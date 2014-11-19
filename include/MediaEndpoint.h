@@ -20,20 +20,53 @@ namespace dbus {
 class Connection;
 class MediaTransportProperties;
 
-class MediaEndpoint {
+class MediaEndpointInterface {
+protected:
+	virtual ~MediaEndpointInterface() {}
+
+	virtual bool selectConfiguration(void* capabilities,
+			int capabilities_len,
+			uint8_t** selected_capabilities,
+			int* selected_capabilities_len) = 0;
+
+	virtual void setConfiguration(const ObjectPath& transport,
+			const MediaTransportProperties& properties) = 0;
+	virtual void clearConfiguration(const ObjectPath& transport) = 0;
+	virtual void release() = 0;
+
 public:
-	void selectConfiguration(void* capabilities,
-			size_t capabilities_len,
-			void** selected_capabilities,
-			size_t* selected_capabilities_len);
+	static void registerMethods(Connection&, MediaEndpointInterface*);
+	static void unregisterMethods(Connection&);
 
-	void setConfiguration(const ObjectPath& transport,
+protected:
+	static const char* INTERFACE;
+
+	static const char* SETCONFIGURATION_METHOD;
+	static const char* SELECTCONFIGURATION_METHOD;
+	static const char* CLEARCONFIGURATION_METHOD;
+	static const char* RELEASE_METHOD;
+
+	friend class MediaEndpointSelectConfiguration;
+	friend class MediaEndpointSetConfiguration;
+	friend class MediaEndpointClearConfiguration;
+	friend class MediaEndpointRelease;
+};
+
+class MediaEndpoint : public MediaEndpointInterface {
+public:
+	MediaEndpoint() {}
+	virtual ~MediaEndpoint() {}
+
+protected:
+	virtual bool selectConfiguration(void* capabilities,
+			int capabilities_len,
+			uint8_t** selected_capabilities,
+			int* selected_capabilities_len);
+
+	virtual void setConfiguration(const ObjectPath& transport,
 			const MediaTransportProperties& properties);
-	void clearConfiguration(const ObjectPath& transport);
-	void release();
-
-	void registerMethods(Connection&);
-	void unregisterMethods(Connection&);
+	virtual void clearConfiguration(const ObjectPath& transport);
+	virtual void release();
 };
 
 } /* namespace dbus */

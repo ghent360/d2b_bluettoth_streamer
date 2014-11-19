@@ -82,7 +82,7 @@ public:
 
 	void loop() {
 		dbus::MediaEndpoint mep;
-		mep.registerMethods(conn_);
+		dbus::MediaEndpointInterface::registerMethods(conn_, &mep);
 		conn_.addMethodHandler(new dbus::AudioSourcePropertyChanged(), NULL);
 		conn_.mainLoop();
 	}
