@@ -11,6 +11,7 @@
 #include "PlaybackThread.h"
 
 #include <glog/logging.h>
+#include <sys/select.h>
 #include <unistd.h>
 
 namespace dbus {
@@ -61,7 +62,18 @@ void* PlaybackThread::threadProc(void *ctx) {
 void PlaybackThread::run() {
 	uint8_t* read_buffer = new uint8_t[read_mtu_];
     while(!signal_stop_) {
-        int len = read(fd_, read_buffer, read_mtu_);
+    	int len;
+    	fd_set readset;
+    	struct timeval timeout;
+
+    	FD_ZERO(&readset);
+    	FD_SET(fd_, &readset);
+    	timeout.tv_sec = 0;
+    	timeout.tv_usec = 100000;  // 100ms
+        len = select(fd_ + 1, &readset, NULL, NULL, &timeout);
+        if (len <= 0) continue;
+
+        len = read(fd_, read_buffer, read_mtu_);
         if (len > 0) {
         	LOG(INFO) << "Got " << len << " bytes";
         } else if (errno != EAGAIN) {
