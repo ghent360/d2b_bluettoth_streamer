@@ -33,9 +33,9 @@ unsigned char BaseMessageIterator::getByte() {
 				" expected DBUS_TYPE_BYTE";
 		return 0;
 	}
-	dbus_int32_t* value;
+	dbus_int32_t value;
 	dbus_message_iter_get_basic(&iter_, &value);
-	return (unsigned char)*value;
+	return (unsigned char)value;
 }
 
 unsigned short BaseMessageIterator::getWord() {
@@ -45,9 +45,9 @@ unsigned short BaseMessageIterator::getWord() {
 				" expected DBUS_TYPE_UINT16";
 		return 0;
 	}
-	dbus_int32_t* value;
+	dbus_int32_t value;
 	dbus_message_iter_get_basic(&iter_, &value);
-	return (unsigned short)*value;
+	return (unsigned short)value;
 }
 
 bool BaseMessageIterator::getBool() {
@@ -57,9 +57,9 @@ bool BaseMessageIterator::getBool() {
 				" expected DBUS_TYPE_BOOLEAN";
 		return false;
 	}
-	dbus_int32_t* value;
+	dbus_int32_t value;
 	dbus_message_iter_get_basic(&iter_, &value);
-	return *value == TRUE;
+	return value == TRUE;
 }
 
 int BaseMessageIterator::getFileDescriptor() {
@@ -69,9 +69,9 @@ int BaseMessageIterator::getFileDescriptor() {
 				" expected DBUS_TYPE_UNIX_FD";
 		return 0;
 	}
-	dbus_int32_t* value;
+	int value;
 	dbus_message_iter_get_basic(&iter_, &value);
-	return *value;
+	return value;
 }
 
 bool BaseMessageIterator::getByteArray(uint8_t** buffer, size_t* len) {

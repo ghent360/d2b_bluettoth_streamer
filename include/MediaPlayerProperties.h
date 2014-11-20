@@ -25,7 +25,7 @@ public:
 	MediaPlayerProperties();
 	~MediaPlayerProperties();
 
-	void parseDictionary(BaseMessageIterator* itprop);
+	void parseDictionary(BaseMessageIterator* it_prop);
 
 private:
     std::string Equalizer;  // "off" or "on"

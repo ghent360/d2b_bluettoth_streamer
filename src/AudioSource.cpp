@@ -14,6 +14,7 @@
 #include "MediaTransport.h"
 #include "Message.h"
 #include "MessageArgumentIterator.h"
+#include "PlaybackThread.h"
 
 #include <glog/logging.h>
 
@@ -59,16 +60,31 @@ void AudioSourceInterface::unregisterMethods(Connection& connection) {
 	connection.removeMethodHandler(AudioSourcePropertyChanged());
 }
 
+AudioSource::~AudioSource() {
+    if (playback_thread_) {
+    	playback_thread_->stop();
+    	delete playback_thread_;
+    }
+}
+
 void AudioSource::onStateChange(const char* value) {
     if (strcmp(value, "playing") == 0) {
     	if (media_end_point_.isTransportConfigValid()) {
-    		MediaTransport mt(connection_, media_end_point_.getTransportPath());
-    		int fd;
-    		int read_mtu;
-    		int write_mtu;
-            mt.acquire("rw", &fd, &read_mtu, &write_mtu);
-            mt.release("rw");
+    	    if (playback_thread_) {
+    	    	playback_thread_->stop();
+    	    	delete playback_thread_;
+    	    	playback_thread_ = 0;
+    	    }
+    	    playback_thread_ = new PlaybackThread(connection_, media_end_point_.getTransportPath());
+    	    playback_thread_->start();
     	}
+    } else if (strcmp(value, "connected") == 0 ||
+    		   strcmp(value, "disconnected") == 0) {
+	    if (playback_thread_) {
+	    	playback_thread_->stop();
+	    	delete playback_thread_;
+	    	playback_thread_ = 0;
+	    }
     }
 }
 

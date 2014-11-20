@@ -28,7 +28,7 @@ public:
 	}
 	~MediaTransportProperties();
 
-	void parseDictionary(BaseMessageIterator* itprop);
+	void parseDictionary(BaseMessageIterator* it_prop);
 
 	MediaTransportProperties& operator = (
 			const MediaTransportProperties& other) {

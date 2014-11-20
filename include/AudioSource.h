@@ -35,14 +35,16 @@ public:
 };
 
 class MediaEndpoint;
+class PlaybackThread;
 class AudioSource : public AudioSourceInterface {
 public:
 	AudioSource(Connection* connection, const MediaEndpoint& media_end_point)
         : connection_(connection),
-		  media_end_point_(media_end_point) {
+		  media_end_point_(media_end_point),
+		  playback_thread_(0) {
 	}
 
-	virtual ~AudioSource() {}
+	virtual ~AudioSource();
 
 private:
 	// possible values "disconnected", "connecting", "connected", "playing"
@@ -50,6 +52,7 @@ private:
 
 	Connection* connection_;
 	const MediaEndpoint& media_end_point_;
+	PlaybackThread* playback_thread_;
 	DISALLOW_COPY_AND_ASSIGN(AudioSource);
 };
 

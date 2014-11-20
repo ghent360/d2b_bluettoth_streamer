@@ -25,13 +25,13 @@ public:
 	      path_(path) {
 	}
 
-	bool registerEndpoint(const ObjectPath& endpointPath,
+	bool registerEndpoint(const ObjectPath& endpoint_path,
 			const char* uuid,
 			int codec_id,
 			const void* capabilities,
 			size_t capabilities_len);
 
-	bool unregisterEndpoint(const ObjectPath& endpointPath);
+	bool unregisterEndpoint(const ObjectPath& endpoint_path);
 private:
 	static const char* INTERFACE;
 	static const char* REGISTER_ENDPONT_METHOD;

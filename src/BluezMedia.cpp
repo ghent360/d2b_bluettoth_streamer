@@ -22,7 +22,7 @@ const char* BluezMedia::UNREGISTER_ENDPONT_METHOD = "UnregisterEndpoint";
 const char* BluezMedia::REGISTER_PLAYER_METHOD = "RegisterPlayer";
 const char* BluezMedia::UNREGISTER_PLAYER_METHOD = "UnregisterPlayer";
 
-bool BluezMedia::registerEndpoint(const ObjectPath& endpointPath,
+bool BluezMedia::registerEndpoint(const ObjectPath& endpoint_path,
 			const char* uuid,
 			int codec_id,
 			const void* capabilities,
@@ -30,7 +30,7 @@ bool BluezMedia::registerEndpoint(const ObjectPath& endpointPath,
 	MethodBase rpc(ORG_BLUEZ, path_.path(), INTERFACE, REGISTER_ENDPONT_METHOD);
 	rpc.prepareCall();
 	MessageArgumentBuilder iter = rpc.argBuilder();
-	iter.append(endpointPath);
+	iter.append(endpoint_path);
 	ContainerIterator args = iter.openContainer(DBUS_TYPE_ARRAY, "{sv}");
 	args.appendDictEntry("UUID", uuid);
 	args.appendDictEntry("Codec", (unsigned char) codec_id);
@@ -41,11 +41,11 @@ bool BluezMedia::registerEndpoint(const ObjectPath& endpointPath,
 	return reply.msg() != NULL;
 }
 
-bool BluezMedia::unregisterEndpoint(const ObjectPath& endpointPath) {
+bool BluezMedia::unregisterEndpoint(const ObjectPath& endpoint_path) {
 	MethodBase rpc(ORG_BLUEZ, path_.path(), INTERFACE, UNREGISTER_ENDPONT_METHOD);
 	rpc.prepareCall();
 	MessageArgumentBuilder iter = rpc.argBuilder();
-	iter.append(endpointPath);
+	iter.append(endpoint_path);
 	Message reply = connection_->sendWithReplyAndBlock(rpc, -1);
 	return reply.msg() != NULL;
 }

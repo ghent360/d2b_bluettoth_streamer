@@ -55,9 +55,13 @@ bool MediaTransport::acquire(const char* access_type,
 	if (reply.msg() != NULL) {
 		MessageArgumentIterator reply_args = reply.argIterator();
 		*fd = reply_args.getFileDescriptor();
-		*read_mtu = reply_args.getWord();
-		*write_mtu = reply_args.getWord();
-		return true;
+		if (reply_args.next()) {
+			*read_mtu = reply_args.getWord();
+			if (reply_args.next()) {
+				*write_mtu = reply_args.getWord();
+				return true;
+			}
+		}
 	}
 	return false;
 }
