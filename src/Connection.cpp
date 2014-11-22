@@ -10,20 +10,15 @@
 
 #include "Connection.h"
 #include "Message.h"
-#include "MethodBase.h"
-#include "MethodLocator.h"
-
 #include <glog/logging.h>
+#include <RemoteMethod.h>
 
 namespace dbus {
 
-Connection::Connection(DBusConnection* connection, bool shared,
-		const char* app_object_path_prefix)
+Connection::Connection(DBusConnection* connection, bool shared)
     : connection_(connection),
       shared_(shared),
-      termination_requested_(false),
-	  app_object_path_prefix_(app_object_path_prefix) {
-	app_object_path_prefix_len_ = strlen(app_object_path_prefix_);
+      termination_requested_(false) {
 }
 
 Connection::~Connection() {
@@ -92,20 +87,45 @@ Message Connection::sendWithReplyAndBlock(Message& msg, int timeout_msec) {
 	return reply;
 }
 
-Message Connection::sendWithReplyAndBlock(const MethodBase& method, int timeout_msec) {
+Message Connection::sendWithReplyAndBlock(const RemoteMethod& method, int timeout_msec) {
     Message msg = method.msg();
     return sendWithReplyAndBlock(msg, timeout_msec);
 }
 
-static void buildHandlerRule(const MethodLocator& handler, std::string* rule) {
-	rule->append("type='signal',interface='");
-	rule->append(handler.getInterface());
+static void buildSignalRule(const char* path, const char* interface,
+		const char* method, std::string* rule) {
+	rule->append("type='signal',path='");
+	rule->append(path);
+	rule->append("',interface='");
+	rule->append(interface);
 	rule->append("',member='");
-	rule->append(handler.getMethod());
+	rule->append(method);
 	rule->append("'");
 }
 
+void Connection::registerSignal(const char* path, const char* interface,
+		const char* method) {
+	DBusError err;
+	std::string rule;
+	buildSignalRule(path, interface, method, &rule);
+	LOG(INFO) << "register signal " << rule;
+	dbus_error_init(&err);
+	dbus_bus_add_match(connection_, rule.c_str(), &err);
+	handleError(&err, __FUNCTION__, __LINE__);
+}
+
+void Connection::unregisterSignal(const char* path, const char* interface,
+		const char* method) {
+	DBusError err;
+	std::string rule;
+	buildSignalRule(path, interface, method, &rule);
+	dbus_error_init(&err);
+	dbus_bus_remove_match(connection_, rule.c_str(), &err);
+	handleError(&err, __FUNCTION__, __LINE__);
+}
+
 void Connection::addObject(ObjectBase* object) {
+	object->registerSignals(this);
 	objects_.push_back(object);
 }
 
@@ -140,9 +160,12 @@ void Connection::mainLoop() {
 						break;
 					}
 				}
-    		}
-    		if (!handled) {
-    			LOG(WARNING) << "Message not handled: ";
+	    		if (!handled) {
+	    			LOG(WARNING) << "Message not handled: ";
+	    			msg.dump();
+	    			Message::forError(msg, DBUS_ERROR_UNKNOWN_OBJECT, path.str(), &reply);
+	    		}
+    		} else {
     			msg.dump();
     		}
     		if (reply.msg() != NULL) {
@@ -154,14 +177,4 @@ void Connection::mainLoop() {
     }
 }
 
-ObjectPath Connection::makeObjectPath(const void* object) {
-	std::string pathStr;
-	char buffer[17];
-	snprintf(buffer, 17, "%p", object);
-	pathStr.append(app_object_path_prefix_);
-	pathStr.append("/");
-	pathStr.append(buffer);
-	ObjectPath result(pathStr);
-	return result;
-}
 } /* namespace dbus */

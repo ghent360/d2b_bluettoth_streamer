@@ -19,10 +19,8 @@
 
 namespace dbus {
 
-class Connection;
 class ObjectBase {
 public:
-	ObjectBase(Connection*);
 	ObjectBase(const ObjectPath& path) : self_(path) {}
 	virtual ~ObjectBase() {}
 
@@ -36,12 +34,37 @@ public:
 
 	Message handleMessage(Message& msg);
 
+	virtual void registerSignals(Connection*) const = 0;
+	virtual void unregisterSignals(Connection*) const = 0;
+
 protected:
+	static ObjectPath makeObjectPath(const char* prefix, const void* object);
+	static ObjectPath makeObjectPath(const void* object) {
+		return makeObjectPath("obj", object);
+	}
+
 	virtual const InterfaceImplementation* matchInterface(
 			const StringWithHash& interface) const = 0;
 
 private:
 	const ObjectPath self_;
+};
+
+// A DBus object that implements a single interface. The object constructor
+// must initialize the interface_ pointer, to point to the DBus metadata.
+class SimpleObjectBase : public ObjectBase {
+public:
+	SimpleObjectBase(const ObjectPath& path)
+        : ObjectBase(path),
+		  interface_(NULL) {}
+
+protected:
+	virtual const InterfaceImplementation* matchInterface(
+			const StringWithHash& interface) const;
+	virtual void registerSignals(Connection* conn) const;
+	virtual void unregisterSignals(Connection* conn) const;
+
+	const InterfaceImplementation* interface_;
 };
 
 } /* namespace dbus */

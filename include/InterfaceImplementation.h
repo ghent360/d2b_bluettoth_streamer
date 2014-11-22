@@ -31,6 +31,7 @@ struct MethodDescriptor {
 	MethodHandler handler_;
 };
 
+class Connection;
 class InterfaceImplementation {
 public:
 	template<class Cm, class Cs>
@@ -66,6 +67,14 @@ public:
 	void addSignal(const MethodDescriptor& method) {
 		signals_.push_back(method);
 	}
+
+	void registerSignals(Connection*, const ObjectBase*) const;
+	void unregisterSignals(Connection*, const ObjectBase*) const;
+
+	const char* getInterfaceName() const {
+		return interfaceName_.str();
+	}
+
 private:
 	const MethodDescriptor* findMethod(const StringWithHash& name,
 			const std::list<MethodDescriptor>& list) const;

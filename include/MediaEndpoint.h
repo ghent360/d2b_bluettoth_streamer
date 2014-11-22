@@ -20,7 +20,7 @@
 
 namespace dbus {
 
-class MediaEndpoint : public ObjectBase {
+class MediaEndpoint : public SimpleObjectBase {
 public:
 	MediaEndpoint(Connection*);
 	MediaEndpoint(const ObjectPath&);
@@ -33,10 +33,6 @@ public:
 	const ObjectPath& getTransportPath() const {
 		return transport_path_;
 	}
-
-protected:
-	virtual const InterfaceImplementation* matchInterface(
-			const StringWithHash& interface) const;
 
 private:
 	bool selectConfiguration(void* capabilities,
@@ -66,8 +62,8 @@ private:
 	static const StringWithHash CLEARCONFIGURATION_METHOD;
 	static const StringWithHash RELEASE_METHOD;
 
-	static const MethodDescriptor mediaEndpointMethods_[];
-	static const MethodDescriptor mediaEndpointSignals_[];
+	static const MethodDescriptor interfaceMethods_[];
+	static const MethodDescriptor interfaceSignals_[];
 	static const InterfaceImplementation implementation_;
 
 	DISALLOW_COPY_AND_ASSIGN(MediaEndpoint);

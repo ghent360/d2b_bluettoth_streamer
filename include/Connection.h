@@ -25,15 +25,14 @@ class Message;
 
 class Connection {
 public:
-	Connection(DBusConnection* conn = NULL, bool shared = false,
-			const char* app_object_path_prefix = "");
+	Connection(DBusConnection* conn = NULL, bool shared = false);
 	virtual ~Connection();
 
 	static int getSystemConnection(Connection* connection);
 	void flush();
 	void close();
 
-	Message sendWithReplyAndBlock(const MethodBase& method, int timeout_msec);
+	Message sendWithReplyAndBlock(const RemoteMethod& method, int timeout_msec);
 	void addObject(ObjectBase* object);
 	void removeObject(const ObjectBase* object);
 
@@ -43,7 +42,10 @@ public:
 	}
 
 	static int handleError(DBusError *err, const char *func, int line);
-	ObjectPath makeObjectPath(const void* object);
+	void registerSignal(const char* path, const char* interface,
+			const char* method);
+	void unregisterSignal(const char* path, const char* interface,
+			const char* method);
 private:
 	Message sendWithReplyAndBlock(Message& msg, int timeout_msec);
 
@@ -51,8 +53,6 @@ private:
 	bool shared_;
     std::list<ObjectBase*> objects_;
     bool termination_requested_;
-    const char* app_object_path_prefix_;
-    size_t app_object_path_prefix_len_;
 
 	DISALLOW_COPY_AND_ASSIGN(Connection);
 };

@@ -54,4 +54,20 @@ Message InterfaceImplementation::handleMessage(Message& msg, ObjectBase* ctx) co
 	return error;
 }
 
+void InterfaceImplementation::registerSignals(Connection* conn,
+		const ObjectBase* object) const {
+	ObjectPath path = object->getPathToSelf();
+	for (const MethodDescriptor& d : signals_) {
+		conn->registerSignal(path.str(), getInterfaceName(), d.methodName_.str());
+	}
+}
+
+void InterfaceImplementation::unregisterSignals(Connection* conn,
+		const ObjectBase* object) const {
+	ObjectPath path = object->getPathToSelf();
+	for (const MethodDescriptor& d : signals_) {
+		conn->unregisterSignal(path.str(), getInterfaceName(), d.methodName_.str());
+	}
+}
+
 } /* namepsace dbus */

@@ -22,14 +22,11 @@ namespace dbus {
 class Connection;
 class MediaEndpoint;
 class PlaybackThread;
-class AudioSource : public ObjectBase {
+class AudioSource : public SimpleObjectBase {
 public:
-	AudioSource(Connection* connection, const MediaEndpoint& media_end_point);
+	AudioSource(Connection* connection, const ObjectPath& path,
+			const MediaEndpoint& media_end_point);
 	virtual ~AudioSource();
-
-protected:
-	virtual const InterfaceImplementation* matchInterface(
-			const StringWithHash& interface) const;
 
 private:
 	static Message handle_propertyChanged(Message& msg, ObjectBase* ctx);
@@ -46,8 +43,8 @@ private:
 	static const StringWithHash PROPERTYCHANGED_SIGNAL;
 	static const StringWithHash STATE_PROPERTY;
 
-	static const MethodDescriptor audioSourceMethods_[];
-	static const MethodDescriptor audioSourceSignals_[];
+	static const MethodDescriptor interfaceMethods_[];
+	static const MethodDescriptor interfaceSignals_[];
 	static const InterfaceImplementation implementation_;
 
 	DISALLOW_COPY_AND_ASSIGN(AudioSource);

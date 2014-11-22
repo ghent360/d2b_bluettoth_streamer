@@ -15,9 +15,8 @@
 #include "MediaTransportProperties.h"
 #include "Message.h"
 #include "MessageArgumentIterator.h"
-#include "MethodBase.h"
-
 #include <glog/logging.h>
+#include <RemoteMethod.h>
 
 namespace dbus {
 
@@ -28,7 +27,7 @@ const char* MediaTransport::RELEASE_METHOD = "Release";
 const char* MediaTransport::SETPROPERTY_METHOD = "SetProperty";
 
 bool MediaTransport::getProperties(MediaTransportProperties* property_bag) {
-	MethodBase rpc(ORG_BLUEZ, path_.path(), INTERFACE, GETPROPERTIES_METHOD);
+	RemoteMethod rpc(ORG_BLUEZ, path_.path(), INTERFACE, GETPROPERTIES_METHOD);
 	rpc.prepareCall();
 	Message reply = connection_->sendWithReplyAndBlock(rpc, -1);
 	if (reply.msg() != NULL) {
@@ -47,7 +46,7 @@ bool MediaTransport::acquire(const char* access_type,
     		int* fd,
     		int* read_mtu,
     		int* write_mtu) {
-	MethodBase rpc(ORG_BLUEZ, path_.path(), INTERFACE, ACQUIRE_METHOD);
+	RemoteMethod rpc(ORG_BLUEZ, path_.path(), INTERFACE, ACQUIRE_METHOD);
 	rpc.prepareCall();
 	MessageArgumentBuilder args = rpc.argBuilder();
 	args.append(access_type);
@@ -67,7 +66,7 @@ bool MediaTransport::acquire(const char* access_type,
 }
 
 bool MediaTransport::release(const char* access_type) {
-	MethodBase rpc(ORG_BLUEZ, path_.path(), INTERFACE, RELEASE_METHOD);
+	RemoteMethod rpc(ORG_BLUEZ, path_.path(), INTERFACE, RELEASE_METHOD);
 	rpc.prepareCall();
 	MessageArgumentBuilder args = rpc.argBuilder();
 	args.append(access_type);

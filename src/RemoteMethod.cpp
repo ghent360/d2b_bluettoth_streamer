@@ -1,5 +1,5 @@
 /*
- * Method.cpp
+ * RemoteMethod.cpp
  *
  *  Created on: Aug 31, 2014
  *      Author: Venelin Efremov
@@ -8,15 +8,15 @@
  *  All rights reserved.
  */
 
-#include "MethodBase.h"
+#include <RemoteMethod.h>
 
 namespace dbus {
 
-MethodBase::~MethodBase() {
+RemoteMethod::~RemoteMethod() {
 
 }
 
-bool MethodBase::prepareCall() {
+bool RemoteMethod::prepareCall() {
   return Message::forMethodCall(*this, &call_);
 }
 

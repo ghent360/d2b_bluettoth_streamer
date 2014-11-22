@@ -28,7 +28,6 @@
 //DEFINE_int32(end, 1000, "The last record to read");
 
 #define A2DP_SINK_UUID        "0000110b-0000-1000-8000-00805f9b34fb"
-#define A2DP_SINK_ENDPOINT    "/MediaEndpoint/A2DPSink"
 
 class Application {
 public:
@@ -53,7 +52,8 @@ public:
 	    return path->isValid();
 	}
 
-	bool registerSinkEndpoint(const dbus::ObjectPath& adapter) {
+	bool registerSinkEndpoint(const dbus::ObjectPath& adapter,
+			dbus::MediaEndpoint* mep) {
 		dbus::BluezMedia bluezMedia(&conn_, adapter);
 
 		a2dp_sbc_t capabilities;
@@ -68,33 +68,37 @@ public:
 		capabilities.min_bitpool = MIN_BITPOOL;
 		capabilities.max_bitpool = MAX_BITPOOL;
 
-		return bluezMedia.registerEndpoint(SINK_ENDPOINT,
+		return bluezMedia.registerEndpoint(mep->getPathToSelf(),
 				SINK_UUID,
 				A2DP_CODEC_SBC,
 				&capabilities,
 				sizeof(capabilities));
 	}
 
-	bool unregisterSinkEndpoint(const dbus::ObjectPath& adapter) {
+	bool unregisterSinkEndpoint(const dbus::ObjectPath& adapter,
+			dbus::MediaEndpoint* mep) {
 		dbus::BluezMedia bluezMedia(&conn_, adapter);
-		return bluezMedia.unregisterEndpoint(SINK_ENDPOINT);
+		return bluezMedia.unregisterEndpoint(mep->getPathToSelf());
 	}
 
 	void loop() {
+		dbus::ObjectPath path;
+		getAdapterPath("", &path);
+
 		dbus::MediaEndpoint mep(&conn_);
-		//dbus::MediaEndpointInterface::registerMethods(conn_, &mep);
-		dbus::AudioSource asrc(&conn_, mep);
-		//dbus::AudioSourceInterface::registerMethods(conn_, &asrc);
+		dbus::AudioSource asrc(&conn_, path, mep);
+		conn_.addObject(&mep);
+		conn_.addObject(&asrc);
+		registerSinkEndpoint(path, &mep);
 		conn_.mainLoop();
+		unregisterSinkEndpoint(path, &mep);
 	}
 private:
-	const static dbus::ObjectPath SINK_ENDPOINT;
 	const static char* SINK_UUID;
 
 	dbus::Connection conn_;
 };
 
-const dbus::ObjectPath Application::SINK_ENDPOINT(A2DP_SINK_ENDPOINT);
 const char* Application::SINK_UUID = A2DP_SINK_UUID;
 
 int main(int argc, char *argv[]) {
@@ -105,11 +109,7 @@ int main(int argc, char *argv[]) {
 	dbus_threads_init_default();
 	Application app;
 	app.connectBus();
-	dbus::ObjectPath path;
-	app.getAdapterPath("", &path);
-	app.registerSinkEndpoint(path);
 	app.loop();
-    app.unregisterSinkEndpoint(path);
 	LOG(INFO) << "Exiting audio daemon";
 	return 0;
 }

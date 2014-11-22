@@ -11,9 +11,8 @@
 #include "Message.h"
 #include "Connection.h"
 #include "MessageArgumentIterator.h"
-#include "MethodBase.h"
-
 #include <glog/logging.h>
+#include <RemoteMethod.h>
 
 namespace dbus {
 
@@ -75,7 +74,7 @@ bool Message::forMethodCall(const char* destination,
 	return false;
 }
 
-bool Message::forMethodCall(const MethodBase& method, Message* result) {
+bool Message::forMethodCall(const RemoteMethod& method, Message* result) {
     return forMethodCall(method.destination(),
     		method.path(),
     		method.interface(),

@@ -20,11 +20,13 @@
 
 namespace dbus {
 
-AudioSource::AudioSource(Connection* connection, const MediaEndpoint& media_end_point)
-    : ObjectBase(connection),
+AudioSource::AudioSource(Connection* connection, const ObjectPath& path,
+		const MediaEndpoint& media_end_point)
+    : SimpleObjectBase(path),
       connection_(connection),
 	  media_end_point_(media_end_point),
 	  playback_thread_(0) {
+	interface_ = &implementation_;
 }
 
 AudioSource::~AudioSource() {
@@ -55,14 +57,6 @@ void AudioSource::onStateChange(const char* value) {
     }
 }
 
-const InterfaceImplementation* AudioSource::matchInterface(
-		const StringWithHash& interface) const {
-	if (implementation_.matchesInterface(interface)) {
-		return &implementation_;
-	}
-	return NULL;
-}
-
 const StringWithHash AudioSource::INTERFACE("org.bluez.AudioSource");
 const StringWithHash AudioSource::PROPERTYCHANGED_SIGNAL("PropertyChanged");
 const StringWithHash AudioSource::STATE_PROPERTY("State");
@@ -87,14 +81,14 @@ Message AudioSource::handle_propertyChanged(Message& msg, ObjectBase* ctx) {
 	return Message();
 }
 
-const MethodDescriptor AudioSource::audioSourceMethods_[] = {
+const MethodDescriptor AudioSource::interfaceMethods_[] = {
 };
 
-const MethodDescriptor AudioSource::audioSourceSignals_[] = {
+const MethodDescriptor AudioSource::interfaceSignals_[] = {
 	MethodDescriptor(PROPERTYCHANGED_SIGNAL, handle_propertyChanged),
 };
 
 const InterfaceImplementation AudioSource::implementation_(INTERFACE,
-		audioSourceMethods_, audioSourceSignals_);
+		interfaceMethods_, interfaceSignals_);
 
 } /* namespace dbus */

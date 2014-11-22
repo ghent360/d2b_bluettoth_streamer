@@ -13,7 +13,8 @@
 #include "Connection.h"
 #include "Message.h"
 #include "MessageArgumentIterator.h"
-#include "MethodBase.h"
+#include <glog/logging.h>
+#include <RemoteMethod.h>
 
 namespace dbus {
 const char* BluezMedia::INTERFACE = "org.bluez.Media";
@@ -27,7 +28,7 @@ bool BluezMedia::registerEndpoint(const ObjectPath& endpoint_path,
 			int codec_id,
 			const void* capabilities,
 			size_t capabilities_len) {
-	MethodBase rpc(ORG_BLUEZ, path_.path(), INTERFACE, REGISTER_ENDPONT_METHOD);
+	RemoteMethod rpc(ORG_BLUEZ, path_.path(), INTERFACE, REGISTER_ENDPONT_METHOD);
 	rpc.prepareCall();
 	MessageArgumentBuilder iter = rpc.argBuilder();
 	iter.append(endpoint_path);
@@ -37,12 +38,14 @@ bool BluezMedia::registerEndpoint(const ObjectPath& endpoint_path,
 	args.appendDictEntry("Capabilities", capabilities, capabilities_len);
 	args.close();
 
+	LOG(INFO) << "registerEndpoint: " << endpoint_path.str();
+
 	Message reply = connection_->sendWithReplyAndBlock(rpc, -1);
 	return reply.msg() != NULL;
 }
 
 bool BluezMedia::unregisterEndpoint(const ObjectPath& endpoint_path) {
-	MethodBase rpc(ORG_BLUEZ, path_.path(), INTERFACE, UNREGISTER_ENDPONT_METHOD);
+	RemoteMethod rpc(ORG_BLUEZ, path_.path(), INTERFACE, UNREGISTER_ENDPONT_METHOD);
 	rpc.prepareCall();
 	MessageArgumentBuilder iter = rpc.argBuilder();
 	iter.append(endpoint_path);

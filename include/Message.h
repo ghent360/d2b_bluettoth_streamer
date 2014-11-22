@@ -22,7 +22,7 @@ namespace dbus {
 
 class MessageArgumentBuilder;
 class MessageArgumentIterator;
-class MethodBase;
+class RemoteMethod;
 
 class Message {
 public:
@@ -30,7 +30,7 @@ public:
 	Message(const Message& other);
 	virtual ~Message();
 
-	static bool forMethodCall(const MethodBase& method, Message* result);
+	static bool forMethodCall(const RemoteMethod& method, Message* result);
 
 	static bool forMethodCall(const char* destination,
 			const char* path,

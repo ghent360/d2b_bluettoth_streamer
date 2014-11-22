@@ -11,11 +11,11 @@
 #include "BluezManager.h"
 #include "BluezNames.h"
 #include "Connection.h"
-#include "MethodBase.h"
 #include "MessageArgumentIterator.h"
 #include "ObjectPath.h"
 
 #include <glog/logging.h>
+#include <RemoteMethod.h>
 
 namespace dbus {
 
@@ -25,14 +25,14 @@ const char* BluezManager::DEFAULT_ADAPTER_METHOD = "DefaultAdapter";
 const char* BluezManager::FIND_ADAPTER_METHOD = "FindAdapter";
 
 ObjectPath BluezManager::defaultAdapter() {
-	MethodBase rpc(ORG_BLUEZ, PATH, INTERFACE, DEFAULT_ADAPTER_METHOD);
+	RemoteMethod rpc(ORG_BLUEZ, PATH, INTERFACE, DEFAULT_ADAPTER_METHOD);
 	rpc.prepareCall();
 	Message reply = connection_->sendWithReplyAndBlock(rpc, -1);
 	return returnObjectPath(reply, DEFAULT_ADAPTER_METHOD);
 }
 
 ObjectPath BluezManager::findAdapter(const char* pattern) {
-	MethodBase rpc(ORG_BLUEZ, PATH, INTERFACE, FIND_ADAPTER_METHOD);
+	RemoteMethod rpc(ORG_BLUEZ, PATH, INTERFACE, FIND_ADAPTER_METHOD);
 	rpc.prepareCall();
 	MessageArgumentBuilder args = rpc.argBuilder();
 	args.append(pattern);

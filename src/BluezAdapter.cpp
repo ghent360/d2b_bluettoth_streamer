@@ -13,7 +13,6 @@
 #include "Connection.h"
 #include "Message.h"
 #include "MessageArgumentIterator.h"
-#include "MethodBase.h"
 
 namespace dbus {
 const char* BluezAdapter::INTERFACE = "org.bluez.Adapter";

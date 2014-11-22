@@ -1,5 +1,5 @@
 /*
- * Method.h
+ * RemoteMethod.h
  *
  *  Created on: Aug 31, 2014
  *      Author: Venelin Efremov
@@ -19,9 +19,9 @@
 
 namespace dbus {
 
-class MethodBase {
+class RemoteMethod {
 public:
-	MethodBase(const char* destination,
+	RemoteMethod(const char* destination,
 			const char* path,
 			const char* interface,
 			const char* method_name)
@@ -31,7 +31,7 @@ public:
           method_name_(method_name) {
 	};
 
-	virtual ~MethodBase();
+	virtual ~RemoteMethod();
 
 	const char* destination() const {
 		return destination_;
@@ -50,6 +50,7 @@ public:
 	}
 
 	bool prepareCall();
+
 	MessageArgumentBuilder argBuilder() {
 		return call_.argBuilder();
 	}

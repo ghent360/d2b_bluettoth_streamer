@@ -14,7 +14,6 @@
 #include "MediaTransportProperties.h"
 #include "Message.h"
 #include "MessageArgumentIterator.h"
-#include "MethodLocator.h"
 #include "a2dp-codecs.h"
 #include "ipc.h"
 
@@ -26,13 +25,15 @@
 namespace dbus {
 
 MediaEndpoint::MediaEndpoint(Connection* conn)
-    : ObjectBase(conn),
+    : SimpleObjectBase(ObjectBase::makeObjectPath("/MediaEndpoint/A2DPSBC", this)),
       transport_config_valid_(false) {
+	interface_ = &implementation_;
 }
 
 MediaEndpoint::MediaEndpoint(const ObjectPath& path)
-    : ObjectBase(path),
+    : SimpleObjectBase(path),
 	  transport_config_valid_(false) {
+	interface_ = &implementation_;
 }
 
 /*****************//**
@@ -171,14 +172,6 @@ void MediaEndpoint::release() {
 	transport_config_valid_ = false;
 }
 
-const InterfaceImplementation* MediaEndpoint::matchInterface(
-		const StringWithHash& interface) const {
-	if (implementation_.matchesInterface(interface)) {
-		return &implementation_;
-	}
-	return NULL;
-}
-
 const StringWithHash MediaEndpoint::INTERFACE("org.bluez.MediaEndpoint");
 const StringWithHash MediaEndpoint::SELECTCONFIGURATION_METHOD("SelectConfiguration");
 const StringWithHash MediaEndpoint::SETCONFIGURATION_METHOD("SetConfiguration");
@@ -245,17 +238,17 @@ Message MediaEndpoint::handle_release(Message& msg, ObjectBase* ctx) {
 	return reply;
 }
 
-const MethodDescriptor MediaEndpoint::mediaEndpointMethods_[] = {
+const MethodDescriptor MediaEndpoint::interfaceMethods_[] = {
 	MethodDescriptor(SELECTCONFIGURATION_METHOD, handle_selectConfiguration),
 	MethodDescriptor(SETCONFIGURATION_METHOD, handle_setConfiguration),
 	MethodDescriptor(CLEARCONFIGURATION_METHOD, handle_clearConfiguration),
 	MethodDescriptor(RELEASE_METHOD, handle_release),
 };
 
-const MethodDescriptor MediaEndpoint::mediaEndpointSignals_[] = {
+const MethodDescriptor MediaEndpoint::interfaceSignals_[] = {
 };
 
 const InterfaceImplementation MediaEndpoint::implementation_(INTERFACE,
-		mediaEndpointMethods_, mediaEndpointSignals_);
+		interfaceMethods_, interfaceSignals_);
 
 } /* namespace dbus */
