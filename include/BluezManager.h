@@ -13,6 +13,8 @@
 
 #include "util.h"
 
+#include <list>
+
 namespace dbus {
 
 class Connection;
@@ -25,16 +27,21 @@ public:
 
 	ObjectPath defaultAdapter();
 	ObjectPath findAdapter(const char* pattern);
+    std::list<ObjectPath> getAdapters();
 
 private:
+	ObjectPath returnObjectPath(Message& msg, const char* method_name);
+
+	Connection* connection_;
+
+	// DBus metadata
 	static const char* INTERFACE;
 	static const char* PATH;
 	static const char* DEFAULT_ADAPTER_METHOD;
 	static const char* FIND_ADAPTER_METHOD;
+	static const char* GET_PROPERTIES_METHOD;
+	static const char* ADAPTERS_PROPERTY;
 
-	ObjectPath returnObjectPath(Message& msg, const char* method_name);
-
-	Connection* connection_;
 	DISALLOW_COPY_AND_ASSIGN(BluezManager);
 };
 

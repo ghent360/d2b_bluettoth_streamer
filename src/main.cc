@@ -10,6 +10,7 @@
 
 
 #include <AudioSource.h>
+#include "BluezAdapter.h"
 #include "BluezManager.h"
 #include "BluezMedia.h"
 #include "Connection.h"
@@ -84,6 +85,10 @@ public:
 	void loop() {
 		dbus::ObjectPath path;
 		getAdapterPath("", &path);
+		dbus::BluezAdapter adp(&conn_, path);
+		for (auto d : adp.getDevices()) {
+			LOG(INFO) << "found " << d.str();
+		}
 
 		dbus::MediaEndpoint mep(&conn_);
 		dbus::AudioSource asrc(&conn_, path, mep);

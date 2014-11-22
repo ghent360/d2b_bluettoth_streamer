@@ -11,41 +11,51 @@
 #ifndef BLUEZADAPTER_H_
 #define BLUEZADAPTER_H_
 
+#include "ObjectBase.h"
 #include "ObjectPath.h"
+#include "StringWithHash.h"
 #include "util.h"
+
+#include <list>
 
 namespace dbus {
 
 class Connection;
 
-class BluezAdapter {
+class BluezAdapter : public SimpleObjectBase {
 public:
-	BluezAdapter(Connection* connection, const ObjectPath& path)
-	    : connection_(connection),
-	      path_(path) {
+	BluezAdapter(Connection* conn, const ObjectPath& path)
+        : SimpleObjectBase(path),
+		  connection_(conn) {
+		interface_ = &implementation_;
 	}
 
-private:
-	static const char* INTERFACE;
-	static const char* GETPROPERTIES_METHOD;
-	static const char* SETPROPERTY_METHOD;
-	static const char* REQUESTSESSION_METHOD;
-	static const char* RELEASESESSION_METHOD;
-	static const char* STARTDISCOVERY_METHOD;
-	static const char* STOPDISCOVERY_METHOD;
-	static const char* FINDDEVICE_METHOD;
-	static const char* CREATEDEVICE_METHOD;
-	static const char* CREATEPAIREDDEVICE_METHOD;
-	static const char* CANCELDEVICECREATION_METHOD;
-	static const char* REMOVEDEVICE_METHOD;
-	static const char* REGISTERAGENT_METHOD;
-	static const char* UNREGISTERAGENT_METHOD;
+	std::list<ObjectPath> getDevices();
 
-	static const char* PROPERTYCHANGED_SIGNAL;
-	static const char* DEVICEFOUND_SIGNAL;
-	static const char* DEVICEDISAPPEARED_SIGNAL;
-	static const char* DEVICECREATED_SIGNAL;
-	static const char* DEVICEREMOVED_SIGNAL;
+private:
+	Connection* connection_;
+
+	// DBus metadata
+	static const StringWithHash INTERFACE;
+	static const StringWithHash GETPROPERTIES_METHOD;
+	static const StringWithHash SETPROPERTY_METHOD;
+	static const StringWithHash REQUESTSESSION_METHOD;
+	static const StringWithHash RELEASESESSION_METHOD;
+	static const StringWithHash STARTDISCOVERY_METHOD;
+	static const StringWithHash STOPDISCOVERY_METHOD;
+	static const StringWithHash FINDDEVICE_METHOD;
+	static const StringWithHash CREATEDEVICE_METHOD;
+	static const StringWithHash CREATEPAIREDDEVICE_METHOD;
+	static const StringWithHash CANCELDEVICECREATION_METHOD;
+	static const StringWithHash REMOVEDEVICE_METHOD;
+	static const StringWithHash REGISTERAGENT_METHOD;
+	static const StringWithHash UNREGISTERAGENT_METHOD;
+
+	static const StringWithHash PROPERTYCHANGED_SIGNAL;
+	static const StringWithHash DEVICEFOUND_SIGNAL;
+	static const StringWithHash DEVICEDISAPPEARED_SIGNAL;
+	static const StringWithHash DEVICECREATED_SIGNAL;
+	static const StringWithHash DEVICEREMOVED_SIGNAL;
 
 	static const char* ADDRESS_PROPERTY;
 	static const char* NAME_PROPERTY;
@@ -59,8 +69,10 @@ private:
 	static const char* DEVICES_PROPERTY;
 	static const char* UUIDS_PROPERTY;
 
-	Connection* connection_;
-	ObjectPath path_;
+	static const MethodDescriptor interfaceMethods_[];
+	static const MethodDescriptor interfaceSignals_[];
+	static const InterfaceImplementation implementation_;
+
 	DISALLOW_COPY_AND_ASSIGN(BluezAdapter);
 };
 
