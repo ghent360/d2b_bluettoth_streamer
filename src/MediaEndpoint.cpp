@@ -25,114 +25,16 @@
 
 namespace dbus {
 
-const char* MediaEndpointInterface::INTERFACE = "org.bluez.MediaEndpoint";
-const char* MediaEndpointInterface::SELECTCONFIGURATION_METHOD = "SelectConfiguration";
-const char* MediaEndpointInterface::SETCONFIGURATION_METHOD = "SetConfiguration";
-const char* MediaEndpointInterface::CLEARCONFIGURATION_METHOD = "ClearConfiguration";
-const char* MediaEndpointInterface::RELEASE_METHOD = "Release";
-
-class MediaEndpointSelectConfiguration : public MethodLocator {
-public:
-	MediaEndpointSelectConfiguration(): MethodLocator(Type::E_METHOD,
-			MediaEndpointInterface::INTERFACE,
-			MediaEndpointInterface::SELECTCONFIGURATION_METHOD) {}
-	virtual Message handle(Message& msg, void* ctx) {
-		MediaEndpointInterface* pThis = reinterpret_cast<MediaEndpointInterface*>(ctx);
-	    void *capabilities_in;
-	    uint8_t *capabilities_out;
-	    int size_in, size_out;
-	    Message reply;
-	    DBusError err;
-	    bool success;
-
-	    LOG(INFO) << "MediaEndpoint::selectConfiguration(handler)";
-	    if (!dbus_message_get_args(msg.msg(), &err, DBUS_TYPE_ARRAY,
-	    		DBUS_TYPE_BYTE, &capabilities_in, &size_in, DBUS_TYPE_INVALID)) {
-	    	Connection::handleError(&err, __FUNCTION__, __LINE__);
-	    	Message::forError(msg, "org.bluez.MediaEndpoint.Error.InvalidArguments",
-	    			"Unable to select configuration", &reply);
-	        return reply;
-	    }
-	    success = pThis->selectConfiguration(capabilities_in, size_in,
-	    		&capabilities_out, &size_out);
-	    if (success) {
-	    	Message::forMethodReturn(msg, &reply);
-	    	dbus_message_append_args(reply.msg(), DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE,
-	    			&capabilities_out, size_out, DBUS_TYPE_INVALID);
-	    	delete [] capabilities_out;
-	    } else {
-	    	Message::forError(msg, "org.bluez.MediaEndpoint.Error.InvalidArguments",
-	    			"Unable to select configuration", &reply);
-	    }
-		return reply;
-	}
-};
-
-class MediaEndpointSetConfiguration : public MethodLocator {
-public:
-	MediaEndpointSetConfiguration(): MethodLocator(Type::E_METHOD,
-			MediaEndpointInterface::INTERFACE,
-			MediaEndpointInterface::SETCONFIGURATION_METHOD) {}
-	virtual Message handle(Message& msg, void* ctx) {
-		MessageArgumentIterator it = msg.argIterator();
-        ObjectPath transport = it.getObjectPath();
-        it.next();
-        MediaTransportProperties transport_properties;
-        BaseMessageIterator itprop = it.recurse();
-        transport_properties.parseDictionary(&itprop);
-        MediaEndpointInterface* pThis = reinterpret_cast<MediaEndpointInterface*>(ctx);
-		pThis->setConfiguration(transport, transport_properties);
-        Message reply;
-        Message::forMethodReturn(msg, &reply);
-		return reply;
-	}
-};
-
-class MediaEndpointClearConfiguration : public MethodLocator {
-public:
-	MediaEndpointClearConfiguration(): MethodLocator(Type::E_METHOD,
-			MediaEndpointInterface::INTERFACE,
-			MediaEndpointInterface::CLEARCONFIGURATION_METHOD) {}
-	virtual Message handle(Message& msg, void* ctx) {
-		MediaEndpointInterface* pThis = reinterpret_cast<MediaEndpointInterface*>(ctx);
-		pThis->clearConfiguration(msg.argIterator().getObjectPath());
-		Message reply;
-		Message::forMethodReturn(msg, &reply);
-		return reply;
-	}
-};
-
-class MediaEndpointRelease : public MethodLocator {
-public:
-	MediaEndpointRelease(): MethodLocator(Type::E_METHOD,
-			MediaEndpointInterface::INTERFACE,
-			MediaEndpointInterface::RELEASE_METHOD) {}
-	virtual Message handle(Message& msg, void* ctx) {
-		MediaEndpointInterface* pThis = reinterpret_cast<MediaEndpointInterface*>(ctx);
-		pThis->release();
-		Message reply;
-		Message::forMethodReturn(msg, &reply);
-		return reply;
-	}
-};
-
-void MediaEndpointInterface::registerMethods(Connection& connection, MediaEndpointInterface* impl) {
-    connection.addMethodHandler(new MediaEndpointSelectConfiguration(), impl);
-    connection.addMethodHandler(new MediaEndpointSetConfiguration(), impl);
-    connection.addMethodHandler(new MediaEndpointClearConfiguration(), impl);
-    connection.addMethodHandler(new MediaEndpointRelease(), impl);
+MediaEndpoint::MediaEndpoint(Connection* conn)
+    : ObjectBase(conn),
+      transport_config_valid_(false) {
 }
 
-void MediaEndpointInterface::unregisterMethods(Connection& connection) {
-    connection.removeMethodHandler(MediaEndpointSelectConfiguration());
-    connection.removeMethodHandler(MediaEndpointSetConfiguration());
-    connection.removeMethodHandler(MediaEndpointClearConfiguration());
-    connection.removeMethodHandler(MediaEndpointRelease());
+MediaEndpoint::MediaEndpoint(const ObjectPath& path)
+    : ObjectBase(path),
+	  transport_config_valid_(false) {
 }
 
-MediaEndpoint::MediaEndpoint() : transport_config_valid_(false) {
-
-}
 /*****************//**
  * Helper to calculate the optimum bitpool, given the sampling frequency,
  * and number of channels.
@@ -257,7 +159,6 @@ void MediaEndpoint::setConfiguration(const ObjectPath& transport,
 	transport_path_ = transport;
 	transport_properties_ = properties;
 	transport_config_valid_ = true;
-	properties.dump();
 }
 
 void MediaEndpoint::clearConfiguration(const ObjectPath& transport) {
@@ -269,5 +170,92 @@ void MediaEndpoint::release() {
 	LOG(INFO) << "MediaEndpoint::release";
 	transport_config_valid_ = false;
 }
+
+const InterfaceImplementation* MediaEndpoint::matchInterface(
+		const StringWithHash& interface) const {
+	if (implementation_.matchesInterface(interface)) {
+		return &implementation_;
+	}
+	return NULL;
+}
+
+const StringWithHash MediaEndpoint::INTERFACE("org.bluez.MediaEndpoint");
+const StringWithHash MediaEndpoint::SELECTCONFIGURATION_METHOD("SelectConfiguration");
+const StringWithHash MediaEndpoint::SETCONFIGURATION_METHOD("SetConfiguration");
+const StringWithHash MediaEndpoint::CLEARCONFIGURATION_METHOD("ClearConfiguration");
+const StringWithHash MediaEndpoint::RELEASE_METHOD("Release");
+
+Message MediaEndpoint::handle_selectConfiguration(Message& msg, ObjectBase* ctx) {
+	MediaEndpoint* pThis = reinterpret_cast<MediaEndpoint*>(ctx);
+    void *capabilities_in;
+    uint8_t *capabilities_out;
+    int size_in, size_out;
+    Message reply;
+    DBusError err;
+    bool success;
+
+    if (!dbus_message_get_args(msg.msg(), &err, DBUS_TYPE_ARRAY,
+    		DBUS_TYPE_BYTE, &capabilities_in, &size_in, DBUS_TYPE_INVALID)) {
+    	Connection::handleError(&err, __FUNCTION__, __LINE__);
+    	Message::forError(msg, "org.bluez.MediaEndpoint.Error.InvalidArguments",
+    			"Unable to select configuration", &reply);
+        return reply;
+    }
+    success = pThis->selectConfiguration(capabilities_in, size_in,
+    		&capabilities_out, &size_out);
+    if (success) {
+    	Message::forMethodReturn(msg, &reply);
+    	dbus_message_append_args(reply.msg(), DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE,
+    			&capabilities_out, size_out, DBUS_TYPE_INVALID);
+    	delete [] capabilities_out;
+    } else {
+    	Message::forError(msg, "org.bluez.MediaEndpoint.Error.InvalidArguments",
+    			"Unable to select configuration", &reply);
+    }
+	return reply;
+}
+
+Message MediaEndpoint::handle_setConfiguration(Message& msg, ObjectBase* ctx) {
+	MessageArgumentIterator it = msg.argIterator();
+	ObjectPath transport = it.getObjectPath();
+	it.next();
+	MediaTransportProperties transport_properties;
+	BaseMessageIterator itprop = it.recurse();
+	transport_properties.parseDictionary(&itprop);
+	MediaEndpoint* pThis = reinterpret_cast<MediaEndpoint*>(ctx);
+	pThis->setConfiguration(transport, transport_properties);
+	Message reply;
+	Message::forMethodReturn(msg, &reply);
+	return reply;
+}
+
+Message MediaEndpoint::handle_clearConfiguration(Message& msg, ObjectBase* ctx) {
+	MediaEndpoint* pThis = reinterpret_cast<MediaEndpoint*>(ctx);
+	pThis->clearConfiguration(msg.argIterator().getObjectPath());
+	Message reply;
+	Message::forMethodReturn(msg, &reply);
+	return reply;
+}
+
+Message MediaEndpoint::handle_release(Message& msg, ObjectBase* ctx) {
+	MediaEndpoint* pThis = reinterpret_cast<MediaEndpoint*>(ctx);
+	pThis->release();
+	Message reply;
+	Message::forMethodReturn(msg, &reply);
+	return reply;
+}
+
+const MethodDescriptor MediaEndpoint::mediaEndpointMethods_[] = {
+	MethodDescriptor(SELECTCONFIGURATION_METHOD, handle_selectConfiguration),
+	MethodDescriptor(SETCONFIGURATION_METHOD, handle_setConfiguration),
+	MethodDescriptor(CLEARCONFIGURATION_METHOD, handle_clearConfiguration),
+	MethodDescriptor(RELEASE_METHOD, handle_release),
+};
+
+const MethodDescriptor MediaEndpoint::mediaEndpointSignals_[] = {
+};
+
+const InterfaceImplementation MediaEndpoint::implementation_(INTERFACE,
+		mediaEndpointMethods_, mediaEndpointSignals_);
 
 } /* namespace dbus */

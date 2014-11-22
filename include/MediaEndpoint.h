@@ -11,51 +11,19 @@
 #ifndef MEDIAENDPOINT_H_
 #define MEDIAENDPOINT_H_
 
+#include "InterfaceImplementation.h"
 #include "MediaTransportProperties.h"
+#include "Message.h"
+#include "ObjectBase.h"
 #include "ObjectPath.h"
 #include "util.h"
 
-#include <string>
-
 namespace dbus {
 
-class Connection;
-
-class MediaEndpointInterface {
-protected:
-	virtual ~MediaEndpointInterface() {}
-
-	virtual bool selectConfiguration(void* capabilities,
-			int capabilities_len,
-			uint8_t** selected_capabilities,
-			int* selected_capabilities_len) = 0;
-
-	virtual void setConfiguration(const ObjectPath& transport,
-			const MediaTransportProperties& properties) = 0;
-	virtual void clearConfiguration(const ObjectPath& transport) = 0;
-	virtual void release() = 0;
-
+class MediaEndpoint : public ObjectBase {
 public:
-	static void registerMethods(Connection&, MediaEndpointInterface*);
-	static void unregisterMethods(Connection&);
-
-protected:
-	static const char* INTERFACE;
-
-	static const char* SETCONFIGURATION_METHOD;
-	static const char* SELECTCONFIGURATION_METHOD;
-	static const char* CLEARCONFIGURATION_METHOD;
-	static const char* RELEASE_METHOD;
-
-	friend class MediaEndpointSelectConfiguration;
-	friend class MediaEndpointSetConfiguration;
-	friend class MediaEndpointClearConfiguration;
-	friend class MediaEndpointRelease;
-};
-
-class MediaEndpoint : public MediaEndpointInterface {
-public:
-	MediaEndpoint();
+	MediaEndpoint(Connection*);
+	MediaEndpoint(const ObjectPath&);
 	virtual ~MediaEndpoint() {}
 
 	bool isTransportConfigValid() const {
@@ -67,20 +35,40 @@ public:
 	}
 
 protected:
-	virtual bool selectConfiguration(void* capabilities,
+	virtual const InterfaceImplementation* matchInterface(
+			const StringWithHash& interface) const;
+
+private:
+	bool selectConfiguration(void* capabilities,
 			int capabilities_len,
 			uint8_t** selected_capabilities,
 			int* selected_capabilities_len);
 
-	virtual void setConfiguration(const ObjectPath& transport,
+	void setConfiguration(const ObjectPath& transport,
 			const MediaTransportProperties& properties);
-	virtual void clearConfiguration(const ObjectPath& transport);
-	virtual void release();
+	void clearConfiguration(const ObjectPath& transport);
+	void release();
 
-private:
+	static Message handle_selectConfiguration(Message& msg, ObjectBase* ctx);
+	static Message handle_setConfiguration(Message& msg, ObjectBase* ctx);
+	static Message handle_clearConfiguration(Message& msg, ObjectBase* ctx);
+	static Message handle_release(Message& msg, ObjectBase* ctx);
+
 	bool transport_config_valid_;
 	ObjectPath transport_path_;
 	MediaTransportProperties transport_properties_;
+
+	// DBus metadata
+	static const StringWithHash INTERFACE;
+
+	static const StringWithHash SETCONFIGURATION_METHOD;
+	static const StringWithHash SELECTCONFIGURATION_METHOD;
+	static const StringWithHash CLEARCONFIGURATION_METHOD;
+	static const StringWithHash RELEASE_METHOD;
+
+	static const MethodDescriptor mediaEndpointMethods_[];
+	static const MethodDescriptor mediaEndpointSignals_[];
+	static const InterfaceImplementation implementation_;
 
 	DISALLOW_COPY_AND_ASSIGN(MediaEndpoint);
 };

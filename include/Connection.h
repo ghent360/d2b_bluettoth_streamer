@@ -11,20 +11,22 @@
 #ifndef SRC_CONNECTION_H_
 #define SRC_CONNECTION_H_
 
+#include "ObjectBase.h"
+#include "ObjectPath.h"
+#include "StringWithHash.h"
 #include "util.h"
+
 #include <dbus/dbus.h>
 #include <list>
-#include <string>
 
 namespace dbus {
 
 class Message;
-class MethodBase;
-class MethodLocator;
 
 class Connection {
 public:
-	Connection(DBusConnection* conn = NULL, bool shared = false);
+	Connection(DBusConnection* conn = NULL, bool shared = false,
+			const char* app_object_path_prefix = "");
 	virtual ~Connection();
 
 	static int getSystemConnection(Connection* connection);
@@ -32,8 +34,8 @@ public:
 	void close();
 
 	Message sendWithReplyAndBlock(const MethodBase& method, int timeout_msec);
-	void addMethodHandler(MethodLocator* handler, void* ctx);
-	void removeMethodHandler(const MethodLocator& handler);
+	void addObject(ObjectBase* object);
+	void removeObject(const ObjectBase* object);
 
 	void mainLoop();
 	void requestTermination() {
@@ -41,18 +43,16 @@ public:
 	}
 
 	static int handleError(DBusError *err, const char *func, int line);
+	ObjectPath makeObjectPath(const void* object);
 private:
 	Message sendWithReplyAndBlock(Message& msg, int timeout_msec);
 
-	struct HandlerTuple {
-		MethodLocator* h;
-		void* c;
-	};
-
 	DBusConnection *connection_;
 	bool shared_;
-    std::list<HandlerTuple> handlers_;
+    std::list<ObjectBase*> objects_;
     bool termination_requested_;
+    const char* app_object_path_prefix_;
+    size_t app_object_path_prefix_len_;
 
 	DISALLOW_COPY_AND_ASSIGN(Connection);
 };

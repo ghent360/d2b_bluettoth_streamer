@@ -81,10 +81,10 @@ public:
 	}
 
 	void loop() {
-		dbus::MediaEndpoint mep;
-		dbus::MediaEndpointInterface::registerMethods(conn_, &mep);
+		dbus::MediaEndpoint mep(&conn_);
+		//dbus::MediaEndpointInterface::registerMethods(conn_, &mep);
 		dbus::AudioSource asrc(&conn_, mep);
-		dbus::AudioSourceInterface::registerMethods(conn_, &asrc);
+		//dbus::AudioSourceInterface::registerMethods(conn_, &asrc);
 		conn_.mainLoop();
 	}
 private:

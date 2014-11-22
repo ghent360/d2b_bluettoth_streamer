@@ -17,10 +17,13 @@
 
 namespace dbus {
 
-Connection::Connection(DBusConnection* connection, bool shared)
+Connection::Connection(DBusConnection* connection, bool shared,
+		const char* app_object_path_prefix)
     : connection_(connection),
       shared_(shared),
-      termination_requested_(false) {
+      termination_requested_(false),
+	  app_object_path_prefix_(app_object_path_prefix) {
+	app_object_path_prefix_len_ = strlen(app_object_path_prefix_);
 }
 
 Connection::~Connection() {
@@ -30,10 +33,10 @@ Connection::~Connection() {
 }
 
 void Connection::close() {
-	for (auto handler : handlers_) {
-		delete handler.h;
+	for (auto o : objects_) {
+		delete o;
 	}
-	handlers_.clear();
+	objects_.clear();
 	if (connection_) {
 		flush();
 		if (shared_) {
@@ -102,34 +105,15 @@ static void buildHandlerRule(const MethodLocator& handler, std::string* rule) {
 	rule->append("'");
 }
 
-void Connection::addMethodHandler(MethodLocator* handler, void* ctx) {
-	if (handler->getType() == MethodLocator::Type::E_SIGNAL) {
-		DBusError err;
-		dbus_error_init(&err);
-		std::string rule;
-		buildHandlerRule(*handler, &rule);
-		dbus_bus_add_match(connection_, rule.c_str(), &err);
-		handleError(&err, __FUNCTION__, __LINE__);
-	}
-	HandlerTuple ht;
-	ht.h = handler;
-	ht.c = ctx;
-	handlers_.push_back(ht);
+void Connection::addObject(ObjectBase* object) {
+	objects_.push_back(object);
 }
 
-void Connection::removeMethodHandler(const MethodLocator& handler) {
-	if (handler.getType() == MethodLocator::Type::E_SIGNAL) {
-		DBusError err;
-		dbus_error_init(&err);
-		std::string rule;
-		buildHandlerRule(handler, &rule);
-		dbus_bus_remove_match(connection_, rule.c_str(), &err);
-		handleError(&err, __FUNCTION__, __LINE__);
-	}
-	for (auto it = handlers_.begin(); it != handlers_.end(); ++it) {
-		if (*it->h == handler) {
-			delete it->h;
-			handlers_.erase(it);
+void Connection::removeObject(const ObjectBase* object) {
+	for (auto it = objects_.begin(); it != objects_.end(); ++it) {
+		if ((*it)->matchesObject(object->getPathToSelf())) {
+			delete *it;
+			objects_.erase(it);
 			break;
 		}
 	}
@@ -145,18 +129,21 @@ void Connection::mainLoop() {
     	while (msg.msg() != NULL && !termination_requested_) {
     		Message reply;
     		bool handled = false;
-    		for (auto handler : handlers_) {
-    			if (handler.h->matches(msg)) {
-                    reply = handler.h->handle(msg, handler.c);
-                    handled = true;
-                    break;
-    			}
+    		int type = msg.getType();
+    		if (type == DBUS_MESSAGE_TYPE_METHOD_CALL ||
+    			type == DBUS_MESSAGE_TYPE_SIGNAL) {
+    			ObjectPath path = msg.getPath();
+				for (auto object : objects_) {
+					if (object->matchesObject(path)) {
+						reply = object->handleMessage(msg);
+						handled = true;
+						break;
+					}
+				}
     		}
     		if (!handled) {
-    			LOG(WARNING) << "Message not handled: "
-    					" type = " << dbus_message_get_type(msg.msg()) << " "
-						<< dbus_message_get_interface(msg.msg()) << "::"
-						<< dbus_message_get_member (msg.msg());
+    			LOG(WARNING) << "Message not handled: ";
+    			msg.dump();
     		}
     		if (reply.msg() != NULL) {
                 uint32_t serial = msg.getSerial();
@@ -165,5 +152,16 @@ void Connection::mainLoop() {
     		msg.takeOwnership(dbus_connection_pop_message (connection_));
     	}
     }
+}
+
+ObjectPath Connection::makeObjectPath(const void* object) {
+	std::string pathStr;
+	char buffer[17];
+	snprintf(buffer, 17, "%p", object);
+	pathStr.append(app_object_path_prefix_);
+	pathStr.append("/");
+	pathStr.append(buffer);
+	ObjectPath result(pathStr);
+	return result;
 }
 } /* namespace dbus */

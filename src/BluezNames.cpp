@@ -1,5 +1,5 @@
 /*
- * BluezNames.cc
+ * BluezNames.cpp
  *
  *  Created on: Aug 31, 2014
  *      Author: Venelin Efremov

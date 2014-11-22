@@ -11,25 +11,24 @@
 #ifndef OBJECTPATH_H_
 #define OBJECTPATH_H_
 
-#include <string>
+#include "StringWithHash.h"
 
 namespace dbus {
 
-class ObjectPath {
+class ObjectPath : public StringWithHash {
 public:
 	ObjectPath() {};
-	ObjectPath(const char* path) : path_(path) {}
+	ObjectPath(const char* path) : StringWithHash(path) {}
+	ObjectPath(const std::string& path) : StringWithHash(path) {}
 	virtual ~ObjectPath() {};
 
 	const char* path() const {
-		return path_.c_str();
+		return StringWithHash::str();
 	}
 
 	bool isValid() const {
-		return path_.length() > 0;
+		return length() > 0;
 	}
-private:
-	std::string path_;
 };
 
 } /* namespace dbus */

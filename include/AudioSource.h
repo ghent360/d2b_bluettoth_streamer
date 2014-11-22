@@ -11,48 +11,45 @@
 #ifndef AUDIOSOURCE_H_
 #define AUDIOSOURCE_H_
 
-#include "MethodLocator.h"
+#include "InterfaceImplementation.h"
+#include "ObjectBase.h"
+#include "ObjectPath.h"
+#include "StringWithHash.h"
 #include "util.h"
 
 namespace dbus {
 
 class Connection;
-class AudioSourceInterface {
-public:
-	virtual ~AudioSourceInterface() {}
-
-protected:
-	virtual void onStateChange(const char* value) = 0;
-
-	friend class AudioSourcePropertyChanged;
-	static const char* INTERFACE;
-	static const char* PROPERTYCHANGED_SIGNAL;
-	static const char* STATE_PROPERTY;
-
-public:
-	static void registerMethods(Connection&, AudioSourceInterface*);
-	static void unregisterMethods(Connection&);
-};
-
 class MediaEndpoint;
 class PlaybackThread;
-class AudioSource : public AudioSourceInterface {
+class AudioSource : public ObjectBase {
 public:
-	AudioSource(Connection* connection, const MediaEndpoint& media_end_point)
-        : connection_(connection),
-		  media_end_point_(media_end_point),
-		  playback_thread_(0) {
-	}
-
+	AudioSource(Connection* connection, const MediaEndpoint& media_end_point);
 	virtual ~AudioSource();
 
+protected:
+	virtual const InterfaceImplementation* matchInterface(
+			const StringWithHash& interface) const;
+
 private:
+	static Message handle_propertyChanged(Message& msg, ObjectBase* ctx);
+
 	// possible values "disconnected", "connecting", "connected", "playing"
 	virtual void onStateChange(const char* value);
 
 	Connection* connection_;
 	const MediaEndpoint& media_end_point_;
 	PlaybackThread* playback_thread_;
+
+	// DBus metadata
+	static const StringWithHash INTERFACE;
+	static const StringWithHash PROPERTYCHANGED_SIGNAL;
+	static const StringWithHash STATE_PROPERTY;
+
+	static const MethodDescriptor audioSourceMethods_[];
+	static const MethodDescriptor audioSourceSignals_[];
+	static const InterfaceImplementation implementation_;
+
 	DISALLOW_COPY_AND_ASSIGN(AudioSource);
 };
 

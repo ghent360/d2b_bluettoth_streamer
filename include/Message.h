@@ -11,7 +11,10 @@
 #ifndef MESSAGE_H_
 #define MESSAGE_H_
 
+#include "StringWithHash.h"
+#include "ObjectPath.h"
 #include "util.h"
+
 #include <dbus/dbus.h>
 #include <string>
 
@@ -83,6 +86,28 @@ public:
 
 	unsigned int getSerial() {
         return dbus_message_get_serial(message_);
+	}
+
+	void dump();
+
+	int getType() {
+		return dbus_message_get_type(message_);
+	}
+
+	ObjectPath getPath() {
+		return ObjectPath(dbus_message_get_path(message_));
+	}
+
+	StringWithHash getInterface() {
+		return ObjectPath(dbus_message_get_interface(message_));
+	}
+
+	StringWithHash getMethod() {
+		return ObjectPath(dbus_message_get_member(message_));
+	}
+
+	StringWithHash getDestination() {
+		return ObjectPath(dbus_message_get_destination(message_));
 	}
 private:
 	const static char* DBUS_ERROR_FAILED_MSG_NAME;
