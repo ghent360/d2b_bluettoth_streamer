@@ -15,6 +15,7 @@
 #include "StringWithHash.h"
 #include "util.h"
 
+#include <glog/logging.h>
 #include <list>
 #include <string>
 
@@ -105,17 +106,26 @@ public:
 
 	template<class Cm, class Cs>
 	InterfaceImplementation(const StringWithHash& interface_name,
-			const Cm& methods, const Cs& signals) {
-		PropertyDescriptor properties[] = {};
-		InterfaceImplementation(interface_name, methods, signals, properties);
+			const Cm& methods, const Cs& signals)
+		: interface_name_(interface_name) {
+		for (const MethodDescriptor& d : methods) {
+			addMethod(d);
+		}
+		for (const MethodDescriptor& d : signals) {
+			addSignal(d);
+		}
 	}
 
 	template<class Cm>
 	InterfaceImplementation(const StringWithHash& interface_name,
-			const Cm& methods) {
-		PropertyDescriptor properties[] = {};
-		MethodDescriptor signals[] = {};
-		InterfaceImplementation(interface_name, methods, signals, properties);
+			const Cm& methods) : interface_name_(interface_name) {
+		for (const MethodDescriptor& d : methods) {
+			addMethod(d);
+		}
+	}
+
+	~InterfaceImplementation() {
+	    LOG(INFO) << "destrction";
 	}
 
 	bool matchesInterface(const StringWithHash& interface) const {

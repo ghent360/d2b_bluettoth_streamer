@@ -83,6 +83,15 @@ public:
 		assign(str);
 		return *this;
 	}
+
+	operator const std::string&() const {
+		return str_;
+	}
+
+	operator const char*() const {
+		return str_.c_str();
+	}
+
 private:
 	void calculateHash() {
 		uint32_t hash = 0;

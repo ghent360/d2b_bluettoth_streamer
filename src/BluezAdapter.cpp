@@ -19,6 +19,19 @@
 #include <glog/logging.h>
 
 namespace dbus {
+
+void BluezAdapter::startDiscovery() {
+	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, STARTDISCOVERY_METHOD);
+	rpc.prepareCall();
+	connection_->sendWithReplyAndBlock(rpc, -1);
+}
+
+void BluezAdapter::stopDiscovery() {
+	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, STOPDISCOVERY_METHOD);
+	rpc.prepareCall();
+	connection_->sendWithReplyAndBlock(rpc, -1);
+}
+
 const StringWithHash BluezAdapter::INTERFACE = "org.bluez.Adapter";
 
 const StringWithHash BluezAdapter::GETPROPERTIES_METHOD = "GetProperties";
@@ -75,11 +88,28 @@ std::list<ObjectPath> BluezAdapter::getDevices() {
 	return result;
 }
 
+Message BluezAdapter::handle_DeviceFound(Message& msg, ObjectBase* ctx,
+		const InterfaceImplementation* interface) {
+	LOG(INFO) << "device found ";
+	MessageArgumentIterator it = msg.argIterator();
+	if (it.hasArgs() && it.getArgumentType() == DBUS_TYPE_STRING) {
+		const char* address = it.getString();
+		it.next();
+		if (it.getArgumentType() == DBUS_TYPE_ARRAY) {
+			DictionaryHelper dict(&it);
+			LOG(INFO) << "device found " << address;
+		}
+
+	}
+	return Message();
+}
+
 const MethodDescriptor BluezAdapter::interfaceMethods_[] = {
 };
 
 const MethodDescriptor BluezAdapter::interfaceSignals_[] = {
-	MethodDescriptor(PROPERTYCHANGED_SIGNAL, default_PropertyChange_handler),
+	//MethodDescriptor(PROPERTYCHANGED_SIGNAL, propertyChange_noError_handler),
+	MethodDescriptor(DEVICEFOUND_SIGNAL, handle_DeviceFound),
 };
 
 const PropertyDescriptor BluezAdapter::interfaceProperties_[] = {

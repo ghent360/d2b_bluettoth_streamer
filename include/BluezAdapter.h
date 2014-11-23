@@ -31,10 +31,12 @@ public:
 	}
 
 	std::list<ObjectPath> getDevices();
+    void startDiscovery();
+    void stopDiscovery();
 
 private:
-	static Message handle_propertyChanged(Message& msg, ObjectBase* ctx,
-			InterfaceImplementation*);
+	static Message handle_DeviceFound(Message& msg, ObjectBase* ctx,
+			const InterfaceImplementation* interface);
 
 	Connection* connection_;
 

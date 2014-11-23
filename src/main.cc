@@ -86,12 +86,12 @@ public:
 		dbus::ObjectPath path;
 		getAdapterPath("", &path);
 		dbus::BluezAdapter adp(&conn_, path);
+		dbus::MediaEndpoint mep(&conn_);
 		for (auto d : adp.getDevices()) {
 			LOG(INFO) << "found " << d.str();
 		}
-
-		dbus::MediaEndpoint mep(&conn_);
 		dbus::AudioSource asrc(&conn_, path, mep);
+		conn_.addObject(&adp);
 		conn_.addObject(&mep);
 		conn_.addObject(&asrc);
 		registerSinkEndpoint(path, &mep);
