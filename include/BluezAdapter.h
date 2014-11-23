@@ -33,6 +33,9 @@ public:
 	std::list<ObjectPath> getDevices();
 
 private:
+	static Message handle_propertyChanged(Message& msg, ObjectBase* ctx,
+			InterfaceImplementation*);
+
 	Connection* connection_;
 
 	// DBus metadata
@@ -71,6 +74,7 @@ private:
 
 	static const MethodDescriptor interfaceMethods_[];
 	static const MethodDescriptor interfaceSignals_[];
+	static const PropertyDescriptor interfaceProperties_[];
 	static const InterfaceImplementation implementation_;
 
 	DISALLOW_COPY_AND_ASSIGN(BluezAdapter);

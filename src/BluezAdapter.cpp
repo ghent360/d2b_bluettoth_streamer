@@ -79,10 +79,14 @@ const MethodDescriptor BluezAdapter::interfaceMethods_[] = {
 };
 
 const MethodDescriptor BluezAdapter::interfaceSignals_[] = {
-	//MethodDescriptor(PROPERTYCHANGED_SIGNAL, handle_propertyChanged),
+	MethodDescriptor(PROPERTYCHANGED_SIGNAL, default_PropertyChange_handler),
+};
+
+const PropertyDescriptor BluezAdapter::interfaceProperties_[] = {
+    //PropertyDescriptor(STATE_PROPERTY, handle_stateChanged)
 };
 
 const InterfaceImplementation BluezAdapter::implementation_(INTERFACE,
-		interfaceMethods_, interfaceSignals_);
+		interfaceMethods_, interfaceSignals_, interfaceProperties_);
 
 } /* namespace dbus */

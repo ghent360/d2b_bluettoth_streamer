@@ -45,10 +45,14 @@ private:
 	void clearConfiguration(const ObjectPath& transport);
 	void release();
 
-	static Message handle_selectConfiguration(Message& msg, ObjectBase* ctx);
-	static Message handle_setConfiguration(Message& msg, ObjectBase* ctx);
-	static Message handle_clearConfiguration(Message& msg, ObjectBase* ctx);
-	static Message handle_release(Message& msg, ObjectBase* ctx);
+	static Message handle_selectConfiguration(Message& msg, ObjectBase* ctx,
+			const InterfaceImplementation*);
+	static Message handle_setConfiguration(Message& msg, ObjectBase* ctx,
+			const InterfaceImplementation*);
+	static Message handle_clearConfiguration(Message& msg, ObjectBase* ctx,
+			const InterfaceImplementation*);
+	static Message handle_release(Message& msg, ObjectBase* ctx,
+			const InterfaceImplementation*);
 
 	bool transport_config_valid_;
 	ObjectPath transport_path_;
@@ -63,7 +67,6 @@ private:
 	static const StringWithHash RELEASE_METHOD;
 
 	static const MethodDescriptor interfaceMethods_[];
-	static const MethodDescriptor interfaceSignals_[];
 	static const InterfaceImplementation implementation_;
 
 	DISALLOW_COPY_AND_ASSIGN(MediaEndpoint);

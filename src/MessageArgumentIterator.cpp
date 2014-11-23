@@ -26,7 +26,7 @@ const char* BaseMessageIterator::getStringForType(int type) {
 	return str;
 }
 
-unsigned char BaseMessageIterator::getByte() {
+uint8_t BaseMessageIterator::getByte() {
 	int arg_type = getArgumentType();
 	if (arg_type != DBUS_TYPE_BYTE) {
 		LOG(ERROR) << "Invalid argument type got " << arg_type <<
@@ -35,10 +35,10 @@ unsigned char BaseMessageIterator::getByte() {
 	}
 	dbus_int32_t value;
 	dbus_message_iter_get_basic(&iter_, &value);
-	return (unsigned char)value;
+	return (uint8_t)value;
 }
 
-unsigned short BaseMessageIterator::getWord() {
+uint16_t BaseMessageIterator::getWord() {
 	int arg_type = getArgumentType();
 	if (arg_type != DBUS_TYPE_UINT16) {
 		LOG(ERROR) << "Invalid argument type got " << arg_type <<
@@ -47,7 +47,7 @@ unsigned short BaseMessageIterator::getWord() {
 	}
 	dbus_int32_t value;
 	dbus_message_iter_get_basic(&iter_, &value);
-	return (unsigned short)value;
+	return (uint16_t)value;
 }
 
 bool BaseMessageIterator::getBool() {
@@ -60,6 +60,78 @@ bool BaseMessageIterator::getBool() {
 	dbus_int32_t value;
 	dbus_message_iter_get_basic(&iter_, &value);
 	return value == TRUE;
+}
+
+uint32_t BaseMessageIterator::getUint32() {
+	int arg_type = getArgumentType();
+	if (arg_type != DBUS_TYPE_UINT32) {
+		LOG(ERROR) << "Invalid argument type got " << arg_type <<
+				" expected DBUS_TYPE_UINT32";
+		return false;
+	}
+	dbus_uint32_t value;
+	dbus_message_iter_get_basic(&iter_, &value);
+	return value;
+}
+
+uint64_t BaseMessageIterator::getUint64() {
+	int arg_type = getArgumentType();
+	if (arg_type != DBUS_TYPE_UINT64) {
+		LOG(ERROR) << "Invalid argument type got " << arg_type <<
+				" expected DBUS_TYPE_UINT64";
+		return false;
+	}
+	dbus_uint64_t value;
+	dbus_message_iter_get_basic(&iter_, &value);
+	return value;
+}
+
+int64_t BaseMessageIterator::getInt64() {
+	int arg_type = getArgumentType();
+	if (arg_type != DBUS_TYPE_INT64) {
+		LOG(ERROR) << "Invalid argument type got " << arg_type <<
+				" expected DBUS_TYPE_INT64";
+		return false;
+	}
+	dbus_int64_t value;
+	dbus_message_iter_get_basic(&iter_, &value);
+	return value;
+}
+
+int32_t BaseMessageIterator::getInt32() {
+	int arg_type = getArgumentType();
+	if (arg_type != DBUS_TYPE_INT32) {
+		LOG(ERROR) << "Invalid argument type got " << arg_type <<
+				" expected DBUS_TYPE_INT32";
+		return false;
+	}
+	dbus_int32_t value;
+	dbus_message_iter_get_basic(&iter_, &value);
+	return value;
+}
+
+int16_t BaseMessageIterator::getShort() {
+	int arg_type = getArgumentType();
+	if (arg_type != DBUS_TYPE_INT16) {
+		LOG(ERROR) << "Invalid argument type got " << arg_type <<
+				" expected DBUS_TYPE_INT16";
+		return false;
+	}
+	dbus_int32_t value;
+	dbus_message_iter_get_basic(&iter_, &value);
+	return (int16_t)value;
+}
+
+double BaseMessageIterator::getDouble() {
+	int arg_type = getArgumentType();
+	if (arg_type != DBUS_TYPE_DOUBLE) {
+		LOG(ERROR) << "Invalid argument type got " << arg_type <<
+				" expected DBUS_TYPE_DOUBLE";
+		return false;
+	}
+	double value;
+	dbus_message_iter_get_basic(&iter_, &value);
+	return value;
 }
 
 int BaseMessageIterator::getFileDescriptor() {

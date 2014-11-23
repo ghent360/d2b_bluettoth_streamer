@@ -29,7 +29,7 @@ public:
 	virtual ~AudioSource();
 
 private:
-	static Message handle_propertyChanged(Message& msg, ObjectBase* ctx);
+	static void handle_stateChanged(const char* new_state, ObjectBase* ctx);
 
 	// possible values "disconnected", "connecting", "connected", "playing"
 	virtual void onStateChange(const char* value);
@@ -45,6 +45,7 @@ private:
 
 	static const MethodDescriptor interfaceMethods_[];
 	static const MethodDescriptor interfaceSignals_[];
+	static const PropertyDescriptor interfaceProperties_[];
 	static const InterfaceImplementation implementation_;
 
 	DISALLOW_COPY_AND_ASSIGN(AudioSource);

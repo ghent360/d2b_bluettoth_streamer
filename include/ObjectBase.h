@@ -64,6 +64,9 @@ protected:
 	virtual void registerSignals(Connection* conn) const;
 	virtual void unregisterSignals(Connection* conn) const;
 
+	static Message default_PropertyChange_handler(Message& msg, ObjectBase* ctx,
+			const InterfaceImplementation* interface);
+
 	const InterfaceImplementation* interface_;
 };
 

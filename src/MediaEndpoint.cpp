@@ -178,7 +178,8 @@ const StringWithHash MediaEndpoint::SETCONFIGURATION_METHOD("SetConfiguration");
 const StringWithHash MediaEndpoint::CLEARCONFIGURATION_METHOD("ClearConfiguration");
 const StringWithHash MediaEndpoint::RELEASE_METHOD("Release");
 
-Message MediaEndpoint::handle_selectConfiguration(Message& msg, ObjectBase* ctx) {
+Message MediaEndpoint::handle_selectConfiguration(Message& msg, ObjectBase* ctx,
+		const InterfaceImplementation*) {
 	MediaEndpoint* pThis = reinterpret_cast<MediaEndpoint*>(ctx);
     void *capabilities_in;
     uint8_t *capabilities_out;
@@ -208,7 +209,8 @@ Message MediaEndpoint::handle_selectConfiguration(Message& msg, ObjectBase* ctx)
 	return reply;
 }
 
-Message MediaEndpoint::handle_setConfiguration(Message& msg, ObjectBase* ctx) {
+Message MediaEndpoint::handle_setConfiguration(Message& msg, ObjectBase* ctx,
+		const InterfaceImplementation*) {
 	MessageArgumentIterator it = msg.argIterator();
 	ObjectPath transport = it.getObjectPath();
 	it.next();
@@ -222,7 +224,8 @@ Message MediaEndpoint::handle_setConfiguration(Message& msg, ObjectBase* ctx) {
 	return reply;
 }
 
-Message MediaEndpoint::handle_clearConfiguration(Message& msg, ObjectBase* ctx) {
+Message MediaEndpoint::handle_clearConfiguration(Message& msg, ObjectBase* ctx,
+		const InterfaceImplementation*) {
 	MediaEndpoint* pThis = reinterpret_cast<MediaEndpoint*>(ctx);
 	pThis->clearConfiguration(msg.argIterator().getObjectPath());
 	Message reply;
@@ -230,7 +233,8 @@ Message MediaEndpoint::handle_clearConfiguration(Message& msg, ObjectBase* ctx) 
 	return reply;
 }
 
-Message MediaEndpoint::handle_release(Message& msg, ObjectBase* ctx) {
+Message MediaEndpoint::handle_release(Message& msg, ObjectBase* ctx,
+		const InterfaceImplementation*) {
 	MediaEndpoint* pThis = reinterpret_cast<MediaEndpoint*>(ctx);
 	pThis->release();
 	Message reply;
@@ -245,10 +249,6 @@ const MethodDescriptor MediaEndpoint::interfaceMethods_[] = {
 	MethodDescriptor(RELEASE_METHOD, handle_release),
 };
 
-const MethodDescriptor MediaEndpoint::interfaceSignals_[] = {
-};
-
-const InterfaceImplementation MediaEndpoint::implementation_(INTERFACE,
-		interfaceMethods_, interfaceSignals_);
+const InterfaceImplementation MediaEndpoint::implementation_(INTERFACE, interfaceMethods_);
 
 } /* namespace dbus */

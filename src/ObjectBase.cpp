@@ -7,6 +7,7 @@
  * Copyright (C) Venelin Efremov 2014
  * All rights reserved.
  */
+#include "MessageArgumentIterator.h"
 #include "ObjectBase.h"
 
 namespace dbus {
@@ -47,6 +48,28 @@ void SimpleObjectBase::registerSignals(Connection* conn) const {
 
 void SimpleObjectBase::unregisterSignals(Connection* conn) const {
 	interface_->unregisterSignals(conn, this);
+}
+
+Message SimpleObjectBase::default_PropertyChange_handler(Message& msg,
+		ObjectBase* ctx, const InterfaceImplementation* interface) {
+	MessageArgumentIterator it = msg.argIterator();
+	Message reply;
+	if (it.hasArgs()) {
+		StringWithHash property_name = it.getString();
+		if (it.next()) {
+		    if (!interface->handlePropertyChanged(property_name, &it, ctx)) {
+		    	Message::forError(msg, DBUS_ERROR_UNKNOWN_PROPERTY,
+		    			property_name.str(), &reply);
+		    }
+		} else {
+			Message::forError(msg, DBUS_ERROR_INVALID_ARGS,
+					"Missing property value", &reply);
+		}
+	} else {
+		Message::forError(msg, DBUS_ERROR_INVALID_ARGS,
+				"Missing property name", &reply);
+	}
+	return reply;
 }
 
 } /* namepsace dbus */

@@ -69,9 +69,15 @@ public:
 		return dbus_message_iter_get_arg_type(&iter_);
 	}
 
-	unsigned char getByte();
-	unsigned short getWord();
 	bool getBool();
+	uint8_t getByte();
+	uint16_t getWord();
+	uint32_t getUint32();
+	uint64_t getUint64();
+	int16_t getShort();
+	int32_t getInt32();
+	int64_t getInt64();
+	double getDouble();
 
 	const char* getString() {
 		return getStringForType(DBUS_TYPE_STRING);

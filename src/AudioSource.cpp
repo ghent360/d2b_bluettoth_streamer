@@ -61,34 +61,23 @@ const StringWithHash AudioSource::INTERFACE("org.bluez.AudioSource");
 const StringWithHash AudioSource::PROPERTYCHANGED_SIGNAL("PropertyChanged");
 const StringWithHash AudioSource::STATE_PROPERTY("State");
 
-Message AudioSource::handle_propertyChanged(Message& msg, ObjectBase* ctx) {
-	MessageArgumentIterator it = msg.argIterator();
-	if (it.hasArgs()) {
-		const char* property_name = it.getString();
-		if (it.next()) {
-			BaseMessageIterator itv = it.recurse();
-			const char* value = itv.getString();
-			if (strcmp(property_name, AudioSource::STATE_PROPERTY.str()) == 0) {
-				AudioSource* pImpl = reinterpret_cast<AudioSource*>(ctx);
-				if (pImpl != NULL) {
-					pImpl->onStateChange(value);
-				}
-			}
-			LOG(INFO) << "AudioSourcePropertyChanged: " << property_name
-					<< " " << value;
-		}
-	}
-	return Message();
+void AudioSource::handle_stateChanged(const char* new_state, ObjectBase* ctx) {
+	AudioSource* pImpl = reinterpret_cast<AudioSource*>(ctx);
+	pImpl->onStateChange(new_state);
 }
 
 const MethodDescriptor AudioSource::interfaceMethods_[] = {
 };
 
 const MethodDescriptor AudioSource::interfaceSignals_[] = {
-	MethodDescriptor(PROPERTYCHANGED_SIGNAL, handle_propertyChanged),
+	MethodDescriptor(PROPERTYCHANGED_SIGNAL, default_PropertyChange_handler)
+};
+
+const PropertyDescriptor AudioSource::interfaceProperties_[] = {
+    PropertyDescriptor(STATE_PROPERTY, handle_stateChanged)
 };
 
 const InterfaceImplementation AudioSource::implementation_(INTERFACE,
-		interfaceMethods_, interfaceSignals_);
+		interfaceMethods_, interfaceSignals_, interfaceProperties_);
 
 } /* namespace dbus */
