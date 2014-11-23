@@ -9,17 +9,19 @@
  */
 
 #include "AudioSource.h"
+#include "BluezNames.h"
 #include "Connection.h"
 #include "MediaEndpoint.h"
 #include "MediaTransport.h"
 #include "Message.h"
 #include "MessageArgumentIterator.h"
 #include "PlaybackThread.h"
+#include "RemoteMethod.h"
 
 #include <glog/logging.h>
 
 namespace dbus {
-
+/*
 AudioSource::AudioSource(Connection* connection, const ObjectPath& path,
 		const MediaEndpoint& media_end_point)
     : SimpleObjectBase(path),
@@ -28,15 +30,41 @@ AudioSource::AudioSource(Connection* connection, const ObjectPath& path,
 	  playback_thread_(0) {
 	interface_ = &implementation_;
 }
+*/
+AudioSource::AudioSource(Connection* connection, const ObjectPath& path)
+    : SimpleObjectBase(path),
+	  connection_(connection) {
+	interface_ = &implementation_;
+}
 
 AudioSource::~AudioSource() {
-    if (playback_thread_) {
+    /*if (playback_thread_) {
     	playback_thread_->stop();
     	delete playback_thread_;
-    }
+    }*/
+}
+
+bool AudioSource::connect() {
+	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, CONNECT_METHOD);
+	rpc.prepareCall();
+	Message reply = connection_->sendWithReplyAndBlock(rpc, -1);
+	return reply.msg() != NULL && reply.getType() == DBUS_MESSAGE_TYPE_METHOD_RETURN;
+}
+
+void AudioSource::connectAsync(googleapis::Callback1<Message*>* cb) {
+	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, CONNECT_METHOD);
+	rpc.prepareCall();
+	connection_->send(rpc, -1, cb);
+}
+
+void AudioSource::disconnect() {
+	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, DISCONNECT_METHOD);
+	rpc.prepareCall();
+	connection_->sendWithReplyAndBlock(rpc, -1);
 }
 
 void AudioSource::onStateChange(const char* value) {
+/*
     if (strcmp(value, "playing") == 0) {
     	if (media_end_point_.isTransportConfigValid()) {
     	    if (playback_thread_) {
@@ -55,9 +83,14 @@ void AudioSource::onStateChange(const char* value) {
 	    	playback_thread_ = 0;
 	    }
     }
+*/
 }
 
 const StringWithHash AudioSource::INTERFACE("org.bluez.AudioSource");
+const StringWithHash AudioSource::CONNECT_METHOD("Connect");
+const StringWithHash AudioSource::DISCONNECT_METHOD("Disconnect");
+const StringWithHash AudioSource::GETPROPERTIES_METHOD("GetProperties");
+
 const StringWithHash AudioSource::PROPERTYCHANGED_SIGNAL("PropertyChanged");
 const StringWithHash AudioSource::STATE_PROPERTY("State");
 

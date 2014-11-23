@@ -17,6 +17,8 @@
 #include "StringWithHash.h"
 #include "util.h"
 
+#include <googleapis/base/callback.h>
+
 namespace dbus {
 
 class Connection;
@@ -24,10 +26,14 @@ class MediaEndpoint;
 class PlaybackThread;
 class AudioSource : public SimpleObjectBase {
 public:
-	AudioSource(Connection* connection, const ObjectPath& path,
-			const MediaEndpoint& media_end_point);
+	//AudioSource(Connection* connection, const ObjectPath& path,
+	//		const MediaEndpoint& media_end_point);
+	AudioSource(Connection* connection, const ObjectPath& path);
 	virtual ~AudioSource();
 
+	bool connect();
+	void connectAsync(googleapis::Callback1<Message*>* cb);
+	void disconnect();
 private:
 	static void handle_stateChanged(const char* new_state, ObjectBase* ctx);
 
@@ -35,11 +41,15 @@ private:
 	virtual void onStateChange(const char* value);
 
 	Connection* connection_;
-	const MediaEndpoint& media_end_point_;
-	PlaybackThread* playback_thread_;
+//	const MediaEndpoint& media_end_point_;
+//	PlaybackThread* playback_thread_;
 
 	// DBus metadata
 	static const StringWithHash INTERFACE;
+	static const StringWithHash CONNECT_METHOD;
+	static const StringWithHash DISCONNECT_METHOD;
+	static const StringWithHash GETPROPERTIES_METHOD;
+
 	static const StringWithHash PROPERTYCHANGED_SIGNAL;
 	static const StringWithHash STATE_PROPERTY;
 

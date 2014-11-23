@@ -25,6 +25,7 @@
 								<option id="gnu.cpp.compiler.exe.debug.option.debugging.level.1804221552" name="Debug Level" superClass="gnu.cpp.compiler.exe.debug.option.debugging.level" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.include.paths.1895044384" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/include}&quot;"/>
+									<listOptionValue builtIn="false" value="/home/vne-marti/workspace/google-api"/>
 									<listOptionValue builtIn="false" value="/home/vne-marti/raspi/bt-audio/gflags/include"/>
 									<listOptionValue builtIn="false" value="/home/vne-marti/raspi/bt-audio/google-glog/src"/>
 									<listOptionValue builtIn="false" value="/usr/lib/x86_64-linux-gnu/dbus-1.0/include"/>
@@ -43,9 +44,11 @@
 							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug.2111576085" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug">
 								<option id="gnu.cpp.link.option.paths.1923548210" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="/home/vne-marti/raspi/bt-audio/gflags/lib"/>
+									<listOptionValue builtIn="false" value="/home/vne-marti/workspace/google-api"/>
 									<listOptionValue builtIn="false" value="/home/vne-marti/raspi/bt-audio/google-glog/.libs"/>
 								</option>
 								<option id="gnu.cpp.link.option.libs.916852486" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
+									<listOptionValue builtIn="false" value="google_base"/>
 									<listOptionValue builtIn="false" value="gflags"/>
 									<listOptionValue builtIn="false" value="glog"/>
 									<listOptionValue builtIn="false" value="dbus-1"/>

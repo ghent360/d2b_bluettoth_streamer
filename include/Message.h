@@ -76,6 +76,10 @@ public:
 		return message_;
 	}
 
+	const DBusMessage* msg() const {
+		return message_;
+	}
+
 	void assign(const Message& other);
 	void takeOwnership(DBusMessage* message);
 
@@ -84,8 +88,12 @@ public:
 		return *this;
 	}
 
-	unsigned int getSerial() {
+	uint32_t getSerial() {
         return dbus_message_get_serial(message_);
+	}
+
+	uint32_t getReplySerial() {
+        return dbus_message_get_reply_serial(message_);
 	}
 
 	void dump();

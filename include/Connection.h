@@ -17,6 +17,7 @@
 #include "util.h"
 
 #include <dbus/dbus.h>
+#include <googleapis/base/callback.h>
 #include <list>
 
 namespace dbus {
@@ -33,13 +34,13 @@ public:
 	void close();
 
 	Message sendWithReplyAndBlock(const RemoteMethod& method, int timeout_msec);
+	void send(const RemoteMethod& method, int timeout_msec,
+			googleapis::Callback1<Message*>* cb);
 	void addObject(ObjectBase* object);
 	void removeObject(const ObjectBase* object);
 
-	void mainLoop();
-	void requestTermination() {
-		termination_requested_ = true;
-	}
+	void process(int time_out);
+	void processTimeouts();
 
 	static int handleError(DBusError *err, const char *func, int line);
 	void registerSignal(const char* path, const char* interface,
@@ -48,11 +49,20 @@ public:
 			const char* method);
 private:
 	Message sendWithReplyAndBlock(Message& msg, int timeout_msec);
+	void send(Message& msg, int timeout_msec,
+			googleapis::Callback1<Message*>* cb);
+
+	struct PendingResponse {
+		dbus_uint32_t serial;
+		bool has_expiration;
+		uint32_t expiration;
+		googleapis::Callback1<Message*>* cb;
+	};
 
 	DBusConnection *connection_;
 	bool shared_;
     std::list<ObjectBase*> objects_;
-    bool termination_requested_;
+    std::list<PendingResponse> pending_responses_;
 
 	DISALLOW_COPY_AND_ASSIGN(Connection);
 };

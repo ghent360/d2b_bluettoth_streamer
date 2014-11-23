@@ -82,21 +82,38 @@ public:
 		return bluezMedia.unregisterEndpoint(mep->getPathToSelf());
 	}
 
+	void onAudioConnected(dbus::Message* msg) {
+		if (msg == NULL) {
+			LOG(ERROR) << "Connect timout";
+		} else if (msg->getType() == DBUS_MESSAGE_TYPE_ERROR ){
+			LOG(ERROR) << "Connect error";
+			msg->dump();
+		}
+	}
+
 	void loop() {
 		dbus::ObjectPath path;
 		getAdapterPath("", &path);
 		dbus::BluezAdapter adp(&conn_, path);
-		dbus::MediaEndpoint mep(&conn_);
+		dbus::ObjectPath audio_device;
+		bool found = false;
 		for (auto d : adp.getDevices()) {
-			LOG(INFO) << "found " << d.str();
+			dbus::AudioSource asrc(&conn_, d);
+			LOG(INFO) << "Trying to connect to " << d;
+			asrc.connectAsync(googleapis::NewCallback(this, &Application::onAudioConnected));
 		}
-		dbus::AudioSource asrc(&conn_, path, mep);
-		conn_.addObject(&adp);
+		do
+		{
+			conn_.process(200);
+		} while (!found);
+/*
+		dbus::MediaEndpoint mep(&conn_);
 		conn_.addObject(&mep);
-		conn_.addObject(&asrc);
+		//conn_.addObject(&asrc);
 		registerSinkEndpoint(path, &mep);
 		conn_.mainLoop();
 		unregisterSinkEndpoint(path, &mep);
+*/
 	}
 private:
 	const static char* SINK_UUID;

@@ -148,8 +148,10 @@ void Message::dump() {
 				" '" << interface << "::"<< member << "'";
 	} else if (type == 3) {
 		const char* err_name = dbus_message_get_error_name(message_);
+		uint32_t serial = dbus_message_get_reply_serial(message_);
 		if (!err_name) err_name = "";
-		LOG(ERROR) << "error: " << err_name;
+		LOG(ERROR) << "error: " << err_name << " dest=" << dest << " path=" <<
+				path << " '" << interface << "::"<< member << "' serial=" << serial;
 	}
 }
 

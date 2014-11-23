@@ -10,6 +10,8 @@
 
 #include "Connection.h"
 #include "Message.h"
+#include "time_util.h"
+
 #include <glog/logging.h>
 #include <RemoteMethod.h>
 
@@ -17,8 +19,7 @@ namespace dbus {
 
 Connection::Connection(DBusConnection* connection, bool shared)
     : connection_(connection),
-      shared_(shared),
-      termination_requested_(false) {
+      shared_(shared) {
 }
 
 Connection::~Connection() {
@@ -92,6 +93,28 @@ Message Connection::sendWithReplyAndBlock(const RemoteMethod& method, int timeou
     return sendWithReplyAndBlock(msg, timeout_msec);
 }
 
+void Connection::send(const RemoteMethod& method, int timeout_msec,
+		googleapis::Callback1<Message*>* cb) {
+    Message msg = method.msg();
+    send(msg, timeout_msec, cb);
+}
+
+void Connection::send(Message& msg, int timeout_msec,
+		googleapis::Callback1<Message*>* cb) {
+	PendingResponse response;
+
+	response.has_expiration = false;
+	response.cb = cb;
+	if (timeout_msec >= 0) {
+		response.has_expiration = true;
+		response.expiration = timeGetTime() + timeout_msec;
+	}
+	response.serial = 9999;
+	dbus_connection_send(connection_, msg.msg(), &response.serial);
+	LOG(INFO) << "Sent serial: " << response.serial;
+	pending_responses_.push_back(response);
+}
+
 static void buildSignalRule(const char* path, const char* interface,
 		const char* method, std::string* rule) {
 	rule->append("type='signal',path='");
@@ -139,42 +162,62 @@ void Connection::removeObject(const ObjectBase* object) {
 	}
 }
 
-void Connection::mainLoop() {
-	termination_requested_ = false;
-    while (!termination_requested_) {
-    	if (dbus_connection_read_write (connection_, 200) == FALSE) {
-    		break;
-    	}
-    	Message msg(dbus_connection_pop_message (connection_));
-    	while (msg.msg() != NULL && !termination_requested_) {
-    		Message reply;
-    		bool handled = false;
-    		int type = msg.getType();
-    		if (type == DBUS_MESSAGE_TYPE_METHOD_CALL ||
-    			type == DBUS_MESSAGE_TYPE_SIGNAL) {
-    			ObjectPath path = msg.getPath();
-				for (auto object : objects_) {
-					if (object->matchesObject(path)) {
-						reply = object->handleMessage(msg);
-						handled = true;
-						break;
-					}
+void Connection::process(int time_out) {
+	if (dbus_connection_read_write (connection_, time_out) == FALSE) {
+		return;
+	}
+	Message msg(dbus_connection_pop_message (connection_));
+	while (msg.msg() != NULL) {
+		Message reply;
+		bool handled = false;
+		int type = msg.getType();
+		if (type == DBUS_MESSAGE_TYPE_METHOD_CALL ||
+			type == DBUS_MESSAGE_TYPE_SIGNAL) {
+			ObjectPath path = msg.getPath();
+			for (auto object : objects_) {
+				if (object->matchesObject(path)) {
+					reply = object->handleMessage(msg);
+					handled = true;
+					break;
 				}
-	    		if (!handled) {
-	    			LOG(WARNING) << "Message not handled: ";
-	    			msg.dump();
-	    			Message::forError(msg, DBUS_ERROR_UNKNOWN_OBJECT, path.str(), &reply);
-	    		}
-    		} else {
-    			msg.dump();
-    		}
-    		if (reply.msg() != NULL) {
-                uint32_t serial = msg.getSerial();
-    			dbus_connection_send(connection_, reply.msg(), &serial);
-    		}
-    		msg.takeOwnership(dbus_connection_pop_message (connection_));
-    	}
-    }
+			}
+			if (!handled) {
+				LOG(WARNING) << "Message not handled: ";
+				msg.dump();
+				Message::forError(msg, DBUS_ERROR_UNKNOWN_OBJECT, path.str(), &reply);
+			}
+		} else {
+			uint32_t serial = msg.getReplySerial();
+			bool found = false;
+			for (auto it = pending_responses_.begin(); it != pending_responses_.end(); ++it) {
+				if (it->serial == serial) {
+					it->cb->Run(&msg);
+					found = true;
+					pending_responses_.erase(it);
+					break;
+				}
+			}
+			if (!found) {
+				msg.dump();
+			}
+		}
+		if (reply.msg() != NULL) {
+			uint32_t serial;
+			dbus_connection_send(connection_, reply.msg(), &serial);
+			LOG(INFO) << "Reply serial " << serial;
+		}
+		msg.takeOwnership(dbus_connection_pop_message (connection_));
+	}
+	processTimeouts();
+}
+
+void Connection::processTimeouts() {
+	uint32_t time = timeGetTime();
+	for (const auto& p : pending_responses_) {
+		if (p.has_expiration && p.expiration > time) {
+			p.cb->Run(NULL);
+		}
+	}
 }
 
 } /* namespace dbus */
