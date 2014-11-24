@@ -14,10 +14,11 @@
 #include "BluezManager.h"
 #include "BluezMedia.h"
 #include "Connection.h"
-#include "SbcMediaEndpoint.h"
 #include "Message.h"
 #include "MessageArgumentIterator.h"
+#include "MpegMediaEndpoint.h"
 #include "ObjectPath.h"
+#include "SbcMediaEndpoint.h"
 
 #include <dbus/dbus.h>
 #include <gflags/gflags.h>
@@ -67,7 +68,7 @@ public:
 		getAdapterPath("", &adapter_path);
 		dbus::BluezAdapter* adp = new dbus::BluezAdapter(&conn_, adapter_path);
 		dbus::SbcMediaEndpoint* mep1 = new dbus::SbcMediaEndpoint();
-		dbus::SbcMediaEndpoint* mep2 = new dbus::SbcMediaEndpoint();
+		dbus::MpegMediaEndpoint* mep2 = new dbus::MpegMediaEndpoint();
 		dbus::BluezMedia* bluezMedia = new dbus::BluezMedia(&conn_, adapter_path);
 		adp->setDeviceFoundCallback(googleapis::NewPermanentCallback(this, &Application::onDeviceFound));
 		conn_.addObject(adp);
