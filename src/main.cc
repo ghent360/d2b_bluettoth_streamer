@@ -9,14 +9,14 @@
  */
 
 
-#include <AudioSource.h>
+#include "AacMediaEndpoint.h"
+#include "AudioSource.h"
 #include "BluezAdapter.h"
 #include "BluezManager.h"
 #include "BluezMedia.h"
 #include "Connection.h"
 #include "Message.h"
 #include "MessageArgumentIterator.h"
-#include "MpegMediaEndpoint.h"
 #include "ObjectPath.h"
 #include "SbcMediaEndpoint.h"
 
@@ -68,14 +68,14 @@ public:
 		getAdapterPath("", &adapter_path);
 		dbus::BluezAdapter* adp = new dbus::BluezAdapter(&conn_, adapter_path);
 		dbus::SbcMediaEndpoint* mep1 = new dbus::SbcMediaEndpoint();
-		dbus::MpegMediaEndpoint* mep2 = new dbus::MpegMediaEndpoint();
+		dbus::AacMediaEndpoint* mep2 = new dbus::AacMediaEndpoint();
 		dbus::BluezMedia* bluezMedia = new dbus::BluezMedia(&conn_, adapter_path);
 		adp->setDeviceFoundCallback(googleapis::NewPermanentCallback(this, &Application::onDeviceFound));
 		conn_.addObject(adp);
 		conn_.addObject(mep1);
 		conn_.addObject(mep2);
-		bluezMedia->registerEndpoint(*mep1);
 		bluezMedia->registerEndpoint(*mep2);
+		//bluezMedia->registerEndpoint(*mep1);
 		for (dbus::ObjectPath d : adp->getDevices()) {
 			dbus::AudioSource* asrc = new dbus::AudioSource(&conn_, d);
 			LOG(INFO) << "Trying to connect to " << d;
