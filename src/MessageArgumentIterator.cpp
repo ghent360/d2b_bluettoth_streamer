@@ -163,6 +163,14 @@ bool BaseMessageIterator::getByteArray(uint8_t** buffer, size_t* len) {
 	return true;
 }
 
+ContainerIterator BaseMessageIterator::openDictionary() {
+	return openContainer(DBUS_TYPE_ARRAY,
+			DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
+			    DBUS_TYPE_STRING_AS_STRING
+				DBUS_TYPE_VARIANT_AS_STRING
+			DBUS_DICT_ENTRY_END_CHAR_AS_STRING);
+}
+
 ContainerIterator BaseMessageIterator::openContainer(int type,
 		const char* signature) {
 	return ContainerIterator(*this, type, signature);
@@ -212,7 +220,7 @@ bool BaseMessageIterator::appendDictEntry(const char* key,
 }
 
 bool BaseMessageIterator::appendDictEntry(const char* key,
-		const void* value, size_t len) {
+		const uint8_t* value, size_t len) {
 	ContainerIterator dict = openContainer(DBUS_TYPE_DICT_ENTRY);
 	if (!dict.isValid()) {
 		return false;

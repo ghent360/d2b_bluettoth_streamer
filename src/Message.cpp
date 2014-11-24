@@ -133,7 +133,7 @@ bool Message::forError(const Message& reply_to,
 	return false;
 }
 
-void Message::dump() {
+void Message::dump(const char* prefix) {
 	int type = getType();
 	const char* dest = dbus_message_get_destination(message_);
 	const char* path = dbus_message_get_path(message_);
@@ -144,14 +144,17 @@ void Message::dump() {
 	if (!interface) interface = "";
 	if (!member) member = "";
 	if (type == 1 || type == 4) {
-		LOG(INFO) << " type=" << type << " dest=" << dest << " path=" << path <<
+		LOG(INFO) << prefix << " type=" << type << " dest=" << dest << " path=" << path <<
 				" '" << interface << "::"<< member << "'";
 	} else if (type == 3) {
 		const char* err_name = dbus_message_get_error_name(message_);
 		uint32_t serial = dbus_message_get_reply_serial(message_);
 		if (!err_name) err_name = "";
-		LOG(ERROR) << "error: " << err_name << " dest=" << dest << " path=" <<
+		LOG(ERROR) << prefix << "error: " << err_name << " dest=" << dest << " path=" <<
 				path << " '" << interface << "::"<< member << "' serial=" << serial;
+	} else if (type == 2) {
+		LOG(INFO) << prefix << " response " << " dest=" << dest << " path=" <<
+				path << " '" << interface << "::"<< member << "'";
 	}
 }
 

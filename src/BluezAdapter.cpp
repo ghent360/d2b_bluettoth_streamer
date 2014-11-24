@@ -90,16 +90,71 @@ std::list<ObjectPath> BluezAdapter::getDevices() {
 
 Message BluezAdapter::handle_DeviceFound(Message& msg, ObjectBase* ctx,
 		const InterfaceImplementation* interface) {
-	LOG(INFO) << "device found ";
-	MessageArgumentIterator it = msg.argIterator();
-	if (it.hasArgs() && it.getArgumentType() == DBUS_TYPE_STRING) {
-		const char* address = it.getString();
-		it.next();
-		if (it.getArgumentType() == DBUS_TYPE_ARRAY) {
-			DictionaryHelper dict(&it);
-			LOG(INFO) << "device found " << address;
+	BluezAdapter* pThis = reinterpret_cast<BluezAdapter*>(ctx);
+	if (NULL != pThis->device_found_cb_) {
+		MessageArgumentIterator it = msg.argIterator();
+		if (it.hasArgs() && it.getArgumentType() == DBUS_TYPE_STRING) {
+			const char* address = it.getString();
+			it.next();
+			if (it.getArgumentType() == DBUS_TYPE_ARRAY) {
+				bool once = !pThis->device_found_cb_->IsRepeatable();
+				pThis->device_found_cb_->Run(address, &it);
+				if (once) {
+					pThis->device_found_cb_ = NULL;
+				}
+			}
 		}
+	}
+	return Message();
+}
 
+Message BluezAdapter::handle_DeviceDisappeared(Message& msg, ObjectBase* ctx,
+		const InterfaceImplementation* interface) {
+	BluezAdapter* pThis = reinterpret_cast<BluezAdapter*>(ctx);
+	if (NULL != pThis->device_disappeared_cb_) {
+		MessageArgumentIterator it = msg.argIterator();
+		if (it.hasArgs() && it.getArgumentType() == DBUS_TYPE_STRING) {
+			const char* address = it.getString();
+			bool once = !pThis->device_disappeared_cb_->IsRepeatable();
+			pThis->device_disappeared_cb_->Run(address);
+			if (once) {
+				pThis->device_disappeared_cb_ = NULL;
+			}
+		}
+	}
+	return Message();
+}
+
+Message BluezAdapter::handle_DeviceCreated(Message& msg, ObjectBase* ctx,
+		const InterfaceImplementation* interface) {
+	BluezAdapter* pThis = reinterpret_cast<BluezAdapter*>(ctx);
+	if (NULL != pThis->device_created_cb_) {
+		MessageArgumentIterator it = msg.argIterator();
+		if (it.hasArgs() && it.getArgumentType() == DBUS_TYPE_OBJECT_PATH) {
+			ObjectPath device = it.getObjectPath();
+			bool once = !pThis->device_created_cb_->IsRepeatable();
+			pThis->device_created_cb_->Run(device);
+			if (once) {
+				pThis->device_created_cb_ = NULL;
+			}
+		}
+	}
+	return Message();
+}
+
+Message BluezAdapter::handle_DeviceRemoved(Message& msg, ObjectBase* ctx,
+		const InterfaceImplementation* interface) {
+	BluezAdapter* pThis = reinterpret_cast<BluezAdapter*>(ctx);
+	if (NULL != pThis->device_removed_cb_) {
+		MessageArgumentIterator it = msg.argIterator();
+		if (it.hasArgs() && it.getArgumentType() == DBUS_TYPE_OBJECT_PATH) {
+			ObjectPath device = it.getObjectPath();
+			bool once = !pThis->device_removed_cb_->IsRepeatable();
+			pThis->device_removed_cb_->Run(device);
+			if (once) {
+				pThis->device_removed_cb_ = NULL;
+			}
+		}
 	}
 	return Message();
 }
@@ -110,6 +165,9 @@ const MethodDescriptor BluezAdapter::interfaceMethods_[] = {
 const MethodDescriptor BluezAdapter::interfaceSignals_[] = {
 	//MethodDescriptor(PROPERTYCHANGED_SIGNAL, propertyChange_noError_handler),
 	MethodDescriptor(DEVICEFOUND_SIGNAL, handle_DeviceFound),
+	MethodDescriptor(DEVICEDISAPPEARED_SIGNAL, handle_DeviceDisappeared),
+	MethodDescriptor(DEVICECREATED_SIGNAL, handle_DeviceCreated),
+	MethodDescriptor(DEVICEREMOVED_SIGNAL, handle_DeviceRemoved),
 };
 
 const PropertyDescriptor BluezAdapter::interfaceProperties_[] = {

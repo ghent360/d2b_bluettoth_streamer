@@ -20,9 +20,10 @@
 
 namespace dbus {
 
+#define A2DP_SINK_UUID        "0000110b-0000-1000-8000-00805f9b34fb"
+
 class MediaEndpoint : public SimpleObjectBase {
 public:
-	MediaEndpoint(Connection*);
 	MediaEndpoint(const ObjectPath&);
 	virtual ~MediaEndpoint() {}
 
@@ -34,17 +35,26 @@ public:
 		return transport_path_;
 	}
 
-private:
-	bool selectConfiguration(void* capabilities,
-			int capabilities_len,
+	virtual const char* getUuid() const = 0;
+	virtual uint8_t getCodecId() const = 0;
+	virtual bool getCapabilities(uint8_t* capabilities,
+			size_t* capabilities_max_len) const = 0;
+protected:
+	virtual bool selectConfiguration(void* capabilities,
+			size_t capabilities_len,
 			uint8_t** selected_capabilities,
-			int* selected_capabilities_len);
+			size_t* selected_capabilities_len) = 0;
 
-	void setConfiguration(const ObjectPath& transport,
+	virtual void setConfiguration(const ObjectPath& transport,
 			const MediaTransportProperties& properties);
-	void clearConfiguration(const ObjectPath& transport);
-	void release();
+	virtual void clearConfiguration(const ObjectPath& transport);
+	virtual void release();
 
+	bool transport_config_valid_;
+	ObjectPath transport_path_;
+	MediaTransportProperties transport_properties_;
+
+private:
 	static Message handle_selectConfiguration(Message& msg, ObjectBase* ctx,
 			const InterfaceImplementation*);
 	static Message handle_setConfiguration(Message& msg, ObjectBase* ctx,
@@ -53,10 +63,6 @@ private:
 			const InterfaceImplementation*);
 	static Message handle_release(Message& msg, ObjectBase* ctx,
 			const InterfaceImplementation*);
-
-	bool transport_config_valid_;
-	ObjectPath transport_path_;
-	MediaTransportProperties transport_properties_;
 
 	// DBus metadata
 	static const StringWithHash INTERFACE;

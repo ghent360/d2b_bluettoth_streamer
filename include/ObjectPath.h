@@ -29,6 +29,14 @@ public:
 	bool isValid() const {
 		return length() > 0;
 	}
+
+	bool isSubpathOf(const ObjectPath& other) {
+		const std::string& path = *this;
+		if (length() > other.length()) {
+			return false;
+		}
+		return path.compare(0, std::string::npos, other.str(), other.length()) == 0;
+	}
 };
 
 } /* namespace dbus */

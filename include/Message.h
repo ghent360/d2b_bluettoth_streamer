@@ -96,7 +96,11 @@ public:
         return dbus_message_get_reply_serial(message_);
 	}
 
-	void dump();
+	bool getNoReply() {
+		return dbus_message_get_no_reply(message_) == TRUE;
+	}
+
+	void dump(const char*);
 
 	int getType() {
 		return dbus_message_get_type(message_);

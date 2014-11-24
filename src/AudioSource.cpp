@@ -64,6 +64,7 @@ void AudioSource::disconnect() {
 }
 
 void AudioSource::onStateChange(const char* value) {
+	LOG(INFO) << "AudioSource::onStateChange " << getPathToSelf() << " " << value;
 /*
     if (strcmp(value, "playing") == 0) {
     	if (media_end_point_.isTransportConfigValid()) {

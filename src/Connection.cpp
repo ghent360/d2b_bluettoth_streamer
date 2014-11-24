@@ -109,9 +109,7 @@ void Connection::send(Message& msg, int timeout_msec,
 		response.has_expiration = true;
 		response.expiration = timeGetTime() + timeout_msec;
 	}
-	response.serial = 9999;
 	dbus_connection_send(connection_, msg.msg(), &response.serial);
-	LOG(INFO) << "Sent serial: " << response.serial;
 	pending_responses_.push_back(response);
 }
 
@@ -131,7 +129,7 @@ void Connection::registerSignal(const char* path, const char* interface,
 	DBusError err;
 	std::string rule;
 	buildSignalRule(path, interface, method, &rule);
-	LOG(INFO) << "register signal " << rule;
+	//LOG(INFO) << "register signal " << rule;
 	dbus_error_init(&err);
 	dbus_bus_add_match(connection_, rule.c_str(), &err);
 	handleError(&err, __FUNCTION__, __LINE__);
@@ -182,9 +180,10 @@ void Connection::process(int time_out) {
 				}
 			}
 			if (!handled) {
-				LOG(WARNING) << "Message not handled: ";
-				msg.dump();
-				Message::forError(msg, DBUS_ERROR_UNKNOWN_OBJECT, path.str(), &reply);
+				msg.dump("Message not handled: ");
+				if (type == DBUS_MESSAGE_TYPE_METHOD_CALL) {
+					Message::forError(msg, DBUS_ERROR_UNKNOWN_OBJECT, path.str(), &reply);
+				}
 			}
 		} else {
 			uint32_t serial = msg.getReplySerial();
@@ -198,11 +197,15 @@ void Connection::process(int time_out) {
 				}
 			}
 			if (!found) {
-				msg.dump();
+				msg.dump("Reply not handled: ");
 			}
+		}
+		if (!msg.getNoReply() && reply.msg() == NULL) {
+			Message::forMethodReturn(msg, &reply);
 		}
 		if (reply.msg() != NULL) {
 			uint32_t serial;
+			reply.dump("Reply: ");
 			dbus_connection_send(connection_, reply.msg(), &serial);
 			LOG(INFO) << "Reply serial " << serial;
 		}

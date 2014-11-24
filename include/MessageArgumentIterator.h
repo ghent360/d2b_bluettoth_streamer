@@ -51,7 +51,7 @@ public:
 				&value) == TRUE;
 	}
 
-	bool append(const void* value, size_t len) {
+	bool append(const uint8_t* value, size_t len) {
 		return dbus_message_iter_append_fixed_array(&iter_,
 				DBUS_TYPE_BYTE, &value, len) == TRUE;
 	}
@@ -63,7 +63,7 @@ public:
 			unsigned char value);
 
 	bool appendDictEntry(const char* key,
-			const void* value, size_t len);
+			const uint8_t* value, size_t len);
 
 	int getArgumentType() {
 		return dbus_message_iter_get_arg_type(&iter_);
@@ -90,6 +90,7 @@ public:
 	bool getByteArray(uint8_t** buffer, size_t* len);
 	int getFileDescriptor();
 
+	ContainerIterator openDictionary();
 	ContainerIterator openContainer(int type, const char* signature);
 	ContainerIterator openContainer(int type, int signature);
 	ContainerIterator openContainer(int type);

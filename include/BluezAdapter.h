@@ -11,11 +11,13 @@
 #ifndef BLUEZADAPTER_H_
 #define BLUEZADAPTER_H_
 
+#include "MessageArgumentIterator.h"
 #include "ObjectBase.h"
 #include "ObjectPath.h"
 #include "StringWithHash.h"
 #include "util.h"
 
+#include <googleapis/base/callback.h>
 #include <list>
 
 namespace dbus {
@@ -24,21 +26,65 @@ class Connection;
 
 class BluezAdapter : public SimpleObjectBase {
 public:
+	typedef googleapis::Callback2<const char*, BaseMessageIterator*> DeviceFoundCallback;
+	typedef googleapis::Callback1<const char*> DeviceDisappearedCallback;
+	typedef googleapis::Callback1<const ObjectPath&> DeviceListCallback;
+
 	BluezAdapter(Connection* conn, const ObjectPath& path)
         : SimpleObjectBase(path),
-		  connection_(conn) {
+		  connection_(conn),
+		  device_found_cb_(NULL),
+		  device_disappeared_cb_(NULL),
+		  device_created_cb_(NULL),
+		  device_removed_cb_(NULL) {
 		interface_ = &implementation_;
+	}
+	~BluezAdapter() {
+		delete device_found_cb_;
+		delete device_disappeared_cb_;
+		delete device_created_cb_;
+		delete device_removed_cb_;
 	}
 
 	std::list<ObjectPath> getDevices();
     void startDiscovery();
     void stopDiscovery();
 
+    void setDeviceFoundCallback(DeviceFoundCallback* cb) {
+   		delete device_found_cb_;
+    	device_found_cb_ = cb;
+    }
+
+    void setDeviceDisappearedCallback(DeviceDisappearedCallback* cb) {
+   		delete device_disappeared_cb_;
+    	device_disappeared_cb_ = cb;
+    }
+
+    void setDeviceCreatedCallback(DeviceListCallback* cb) {
+   		delete device_created_cb_;
+   		device_created_cb_ = cb;
+    }
+
+    void setDeviceRemovedCallback(DeviceListCallback* cb) {
+   		delete device_removed_cb_;
+   		device_removed_cb_ = cb;
+    }
+
 private:
 	static Message handle_DeviceFound(Message& msg, ObjectBase* ctx,
 			const InterfaceImplementation* interface);
+	static Message handle_DeviceDisappeared(Message& msg, ObjectBase* ctx,
+			const InterfaceImplementation* interface);
+	static Message handle_DeviceCreated(Message& msg, ObjectBase* ctx,
+			const InterfaceImplementation* interface);
+	static Message handle_DeviceRemoved(Message& msg, ObjectBase* ctx,
+			const InterfaceImplementation* interface);
 
 	Connection* connection_;
+	DeviceFoundCallback* device_found_cb_;
+	DeviceDisappearedCallback* device_disappeared_cb_;
+	DeviceListCallback* device_created_cb_;
+	DeviceListCallback* device_removed_cb_;
 
 	// DBus metadata
 	static const StringWithHash INTERFACE;

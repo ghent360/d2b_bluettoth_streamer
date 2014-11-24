@@ -54,6 +54,13 @@ void PropertyHandler::callHandler(BaseMessageIterator* value_iterator,
     	break;
     }
 
+    case DBUS_TYPE_VARIANT:
+    {
+    	auto variant_value = value_iterator->recurse();
+    	callHandler(&variant_value, ctx);
+    	break;
+    }
+
     default:
     	LOG(ERROR) << "Type " << type << " is not supported yet.";
 		break;
