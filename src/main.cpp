@@ -18,7 +18,7 @@
 #include "Message.h"
 #include "MessageArgumentIterator.h"
 #include "ObjectPath.h"
-#include "PlaybackThread.h"
+#include "SbcDecodeThread.h"
 #include "SbcMediaEndpoint.h"
 
 #include <dbus/dbus.h>
@@ -102,7 +102,7 @@ public:
 	    	    	delete playback_thread_;
 	    	    	playback_thread_ = 0;
 	    	    }
-	    	    playback_thread_ = new dbus::PlaybackThread(&conn_,
+	    	    playback_thread_ = new dbus::SbcDecodeThread(&conn_,
 	    	    		media_endpoint_->getTransportPath());
 	    	    playback_thread_->start();
 	    	}

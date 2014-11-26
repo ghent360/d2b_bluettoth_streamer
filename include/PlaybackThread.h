@@ -26,6 +26,9 @@ public:
 		stop();
 	};
 
+	virtual void decode(const uint8_t* buffer, size_t size) = 0;
+	virtual void play_pcm(const uint8_t* buffer, size_t size);
+
 	void start();
 	void stop();
 private:

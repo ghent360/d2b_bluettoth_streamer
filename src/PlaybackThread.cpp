@@ -11,7 +11,6 @@
 #include "PlaybackThread.h"
 
 #include <glog/logging.h>
-#include <stdio.h>
 #include <sys/select.h>
 #include <unistd.h>
 
@@ -60,12 +59,7 @@ void* PlaybackThread::threadProc(void *ctx) {
 	return NULL;
 }
 
-static int file_no = 1;
-
 void PlaybackThread::run() {
-	static char file_name[128];
-	sprintf(file_name, "/tmp/bt_out%d.sbc", file_no++);
-	FILE* out_file = fopen(file_name, "wb");
 	uint8_t* read_buffer = new uint8_t[read_mtu_];
     while(!signal_stop_) {
     	int len;
@@ -81,8 +75,7 @@ void PlaybackThread::run() {
 
         len = read(fd_, read_buffer, read_mtu_);
         if (len > 0) {
-        	//LOG(INFO) << "Got " << len << " bytes";
-        	fwrite(read_buffer, 1, len, out_file);
+        	decode(read_buffer, len);
         } else if (errno != EAGAIN) {
         	LOG(ERROR) << "FD " << fd_ << " error = " << errno;
         }
@@ -90,7 +83,10 @@ void PlaybackThread::run() {
     if (read_buffer) {
     	delete [] read_buffer;
     }
-    fclose(out_file);
+}
+
+void PlaybackThread::play_pcm(const uint8_t* buffer, size_t size) {
+
 }
 
 } /* namespace dbus */
