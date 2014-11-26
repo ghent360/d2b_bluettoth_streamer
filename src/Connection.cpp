@@ -71,7 +71,7 @@ int Connection::getSystemConnection(Connection* connection) {
     connection->close();
     connection->connection_ = conn;
     connection->shared_ = true;
-    LOG(INFO) << "Name " << dbus_bus_get_unique_name(conn);
+    //LOG(INFO) << "Name " << dbus_bus_get_unique_name(conn);
     return 0;
 }
 
@@ -190,7 +190,7 @@ void Connection::process(int time_out) {
 			bool found = false;
 			for (auto it = pending_responses_.begin(); it != pending_responses_.end(); ++it) {
 				if (it->serial == serial) {
-					it->cb->Run(&msg);
+					if (NULL != it->cb) it->cb->Run(&msg);
 					found = true;
 					pending_responses_.erase(it);
 					break;
@@ -205,9 +205,7 @@ void Connection::process(int time_out) {
 		}
 		if (reply.msg() != NULL) {
 			uint32_t serial;
-			reply.dump("Reply: ");
 			dbus_connection_send(connection_, reply.msg(), &serial);
-			LOG(INFO) << "Reply serial " << serial;
 		}
 		msg.takeOwnership(dbus_connection_pop_message (connection_));
 	}

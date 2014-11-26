@@ -23,26 +23,28 @@ namespace dbus {
 
 class Connection;
 class MediaEndpoint;
-class PlaybackThread;
 class AudioSource : public SimpleObjectBase {
 public:
-	//AudioSource(Connection* connection, const ObjectPath& path,
-	//		const MediaEndpoint& media_end_point);
+	// possible values "disconnected", "connecting", "connected", "playing"
+	typedef googleapis::Callback2<const char*, const AudioSource*> OnStateChangeCallback;
+
 	AudioSource(Connection* connection, const ObjectPath& path);
 	virtual ~AudioSource();
 
 	bool connect();
-	void connectAsync(googleapis::Callback1<Message*>* cb);
+	void connectAsync(int timeout, googleapis::Callback1<Message*>* cb);
 	void disconnect();
+	void disconnectAsync(int timeout, googleapis::Callback1<Message*>* cb);
+
+	void setOnStateChangeCallback(OnStateChangeCallback* cb) {
+	   		delete on_state_change_cb_;
+	   		on_state_change_cb_ = cb;
+	}
 private:
 	static void handle_stateChanged(const char* new_state, ObjectBase* ctx);
 
-	// possible values "disconnected", "connecting", "connected", "playing"
-	virtual void onStateChange(const char* value);
-
 	Connection* connection_;
-//	const MediaEndpoint& media_end_point_;
-//	PlaybackThread* playback_thread_;
+	OnStateChangeCallback* on_state_change_cb_;
 
 	// DBus metadata
 	static const StringWithHash INTERFACE;

@@ -15,33 +15,20 @@
 #include "MediaTransport.h"
 #include "Message.h"
 #include "MessageArgumentIterator.h"
-#include "PlaybackThread.h"
 #include "RemoteMethod.h"
 
 #include <glog/logging.h>
 
 namespace dbus {
-/*
-AudioSource::AudioSource(Connection* connection, const ObjectPath& path,
-		const MediaEndpoint& media_end_point)
-    : SimpleObjectBase(path),
-      connection_(connection),
-	  media_end_point_(media_end_point),
-	  playback_thread_(0) {
-	interface_ = &implementation_;
-}
-*/
 AudioSource::AudioSource(Connection* connection, const ObjectPath& path)
     : SimpleObjectBase(path),
-	  connection_(connection) {
+	  connection_(connection),
+	  on_state_change_cb_(NULL) {
 	interface_ = &implementation_;
 }
 
 AudioSource::~AudioSource() {
-    /*if (playback_thread_) {
-    	playback_thread_->stop();
-    	delete playback_thread_;
-    }*/
+	delete on_state_change_cb_;
 }
 
 bool AudioSource::connect() {
@@ -51,10 +38,10 @@ bool AudioSource::connect() {
 	return reply.msg() != NULL && reply.getType() == DBUS_MESSAGE_TYPE_METHOD_RETURN;
 }
 
-void AudioSource::connectAsync(googleapis::Callback1<Message*>* cb) {
+void AudioSource::connectAsync(int timeout, googleapis::Callback1<Message*>* cb) {
 	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, CONNECT_METHOD);
 	rpc.prepareCall();
-	connection_->send(rpc, -1, cb);
+	connection_->send(rpc, timeout, cb);
 }
 
 void AudioSource::disconnect() {
@@ -63,28 +50,10 @@ void AudioSource::disconnect() {
 	connection_->sendWithReplyAndBlock(rpc, -1);
 }
 
-void AudioSource::onStateChange(const char* value) {
-	LOG(INFO) << "AudioSource::onStateChange " << getPathToSelf() << " " << value;
-/*
-    if (strcmp(value, "playing") == 0) {
-    	if (media_end_point_.isTransportConfigValid()) {
-    	    if (playback_thread_) {
-    	    	playback_thread_->stop();
-    	    	delete playback_thread_;
-    	    	playback_thread_ = 0;
-    	    }
-    	    playback_thread_ = new PlaybackThread(connection_, media_end_point_.getTransportPath());
-    	    playback_thread_->start();
-    	}
-    } else if (strcmp(value, "connected") == 0 ||
-    		   strcmp(value, "disconnected") == 0) {
-	    if (playback_thread_) {
-	    	playback_thread_->stop();
-	    	delete playback_thread_;
-	    	playback_thread_ = 0;
-	    }
-    }
-*/
+void AudioSource::disconnectAsync(int timeout, googleapis::Callback1<Message*>* cb) {
+	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, DISCONNECT_METHOD);
+	rpc.prepareCall();
+	connection_->send(rpc, timeout, cb);
 }
 
 const StringWithHash AudioSource::INTERFACE("org.bluez.AudioSource");
@@ -96,8 +65,14 @@ const StringWithHash AudioSource::PROPERTYCHANGED_SIGNAL("PropertyChanged");
 const StringWithHash AudioSource::STATE_PROPERTY("State");
 
 void AudioSource::handle_stateChanged(const char* new_state, ObjectBase* ctx) {
-	AudioSource* pImpl = reinterpret_cast<AudioSource*>(ctx);
-	pImpl->onStateChange(new_state);
+	AudioSource* pThis = reinterpret_cast<AudioSource*>(ctx);
+	if (pThis->on_state_change_cb_) {
+		bool once = !pThis->on_state_change_cb_->IsRepeatable();
+		pThis->on_state_change_cb_->Run(new_state, pThis);
+		if (once) {
+			pThis->on_state_change_cb_ = NULL;
+		}
+	}
 }
 
 const MethodDescriptor AudioSource::interfaceMethods_[] = {

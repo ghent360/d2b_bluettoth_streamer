@@ -124,9 +124,7 @@ public:
 		}
 	}
 
-	~InterfaceImplementation() {
-	    LOG(INFO) << "destrction";
-	}
+	~InterfaceImplementation() {}
 
 	bool matchesInterface(const StringWithHash& interface) const {
 		return interface == interface_name_;

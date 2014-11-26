@@ -40,8 +40,6 @@ bool BluezMedia::registerEndpoint(const ObjectPath& endpoint_path,
 	args.appendDictEntry("Capabilities", capabilities, capabilities_len);
 	args.close();
 
-	LOG(INFO) << "registerEndpoint: " << endpoint_path.str();
-
 	Message reply = connection_->sendWithReplyAndBlock(rpc, -1);
 	return reply.msg() != NULL;
 }
