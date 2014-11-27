@@ -11,4 +11,6 @@ missing
 Makefile.in
 config.guess
 config.sub
+autoscan.log
+config.h.in~
 

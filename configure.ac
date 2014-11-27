@@ -2,7 +2,19 @@ AC_INIT([bt-a2dp], [1.0], [veffremov.ve@gmail.com])
 AC_USE_SYSTEM_EXTENSIONS
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_PROG_CXX
+AC_PROG_CC
+AC_PROG_AWK
+AC_PROG_INSTALL
+AC_PROG_CPP
+AC_PROG_MKDIR_P
+
 AC_CONFIG_HEADERS([config.h])
+
+# Checks for libraries.
+AC_CHECK_LIB([asound], [snd_pcm_close])
+#AC_CHECK_LIB([gflags], [main])
+#AC_CHECK_LIB([glog], [main])
+AC_CHECK_LIB([pthread], [pthread_create])
 
 # Checks for header files.
 AC_CHECK_HEADERS([float.h limits.h malloc.h stddef.h stdint.h stdlib.h string.h sys/time.h unistd.h])
@@ -46,7 +58,6 @@ PKG_CHECK_MODULES(libglog, [libglog >= $LIBGLOG_REQUIRED_VERSION],,
 )
 AC_SUBST(libglog_CFLAGS)
 AC_SUBST(libglog_LIBS)
-
 
 AC_CONFIG_FILES([
  Makefile

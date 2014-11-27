@@ -24,7 +24,11 @@ bt_a2dp_SOURCES =               \
 
 bt_a2dp_CPPFLAGS = \
     -I$(top_srcdir)/include \
+    -I$(top_srcdir)/sbc \
     -I$(top_srcdir) \
-    $(dbus_CFLAGS)
+    $(dbus_CFLAGS) \
+    $(libglog_CFLAGS) 
 
 bt_a2dp_CXXFLAGS = --std=c++11 
+
+bt_a2dp_LDADD =  $(libglog_LIBS) $(dbus_LIBS) -lgflags -lasound -lpthread
