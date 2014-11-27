@@ -24,4 +24,7 @@ bt_a2dp_SOURCES =               \
 
 bt_a2dp_CPPFLAGS = \
     -I$(top_srcdir)/include \
-    -I$(top_srcdir)
+    -I$(top_srcdir) \
+    $(dbus_CFLAGS)
+
+bt_a2dp_CXXFLAGS = --std=c++11 

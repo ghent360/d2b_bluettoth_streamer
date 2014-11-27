@@ -29,6 +29,25 @@ AC_FUNC_MALLOC
 AC_FUNC_STRNLEN
 AC_CHECK_FUNCS([bzero clock_gettime gethostbyname getpagesize gettimeofday memchr memset select strtol strtoul strtoull])
 
+PKG_PROG_PKG_CONFIG
+
+DBUS_REQUIRED_VERSION=0.60
+PKG_CHECK_MODULES(dbus, [dbus-1 >= $DBUS_REQUIRED_VERSION],,
+	AC_MSG_ERROR([You need the DBus libraries (version 0.6 or better)]
+	[http://www.freedesktop.org/wiki/Software_2fdbus])
+)
+AC_SUBST(dbus_CFLAGS)
+AC_SUBST(dbus_LIBS)
+
+LIBGLOG_REQUIRED_VERSION=0.3.3
+PKG_CHECK_MODULES(libglog, [libglog >= $LIBGLOG_REQUIRED_VERSION],,
+	AC_MSG_ERROR([You need the glog library (version 0.3.3 or better)]
+	[google.com google glog])
+)
+AC_SUBST(libglog_CFLAGS)
+AC_SUBST(libglog_LIBS)
+
+
 AC_CONFIG_FILES([
  Makefile
  src/Makefile
