@@ -9,4 +9,6 @@ depcomp
 install-sh
 missing
 Makefile.in
+config.guess
+config.sub
 
