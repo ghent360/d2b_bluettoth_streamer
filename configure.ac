@@ -1,12 +1,17 @@
 AC_INIT([bt-a2dp], [1.0], [veffremov.ve@gmail.com])
+AC_CONFIG_MACRO_DIR([m4])
 AC_USE_SYSTEM_EXTENSIONS
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+
 AC_PROG_CXX
 AC_PROG_CC
 AC_PROG_AWK
 AC_PROG_INSTALL
 AC_PROG_CPP
+AM_PROG_AR
 AC_PROG_MKDIR_P
+
+LT_INIT
 
 AC_CONFIG_HEADERS([config.h])
 
@@ -62,6 +67,7 @@ AC_SUBST(libglog_LIBS)
 AC_CONFIG_FILES([
  Makefile
  src/Makefile
+ sbc/Makefile
 ])
 AC_OUTPUT
 

@@ -31,4 +31,6 @@ bt_a2dp_CPPFLAGS = \
 
 bt_a2dp_CXXFLAGS = --std=c++11 
 
-bt_a2dp_LDADD =  $(libglog_LIBS) $(dbus_LIBS) -lgflags -lasound -lpthread
+bt_a2dp_LDADD =  $(libglog_LIBS) $(dbus_LIBS) \
+    $(top_builddir)/sbc/libsbc.la \
+    -lgflags -lasound -lpthread
