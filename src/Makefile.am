@@ -21,4 +21,7 @@ bt_a2dp_SOURCES =               \
     Connection.cpp	        \
     Message.cpp		        \
     time_util.cpp
- 
+
+bt_a2dp_CPPFLAGS = \
+    -I$(top_srcdir)/include \
+    -I$(top_srcdir)
