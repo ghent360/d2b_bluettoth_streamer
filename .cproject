@@ -51,6 +51,7 @@
 								</option>
 								<option id="gnu.cpp.link.option.libs.916852486" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="google_base"/>
+									<listOptionValue builtIn="false" value="asound"/>
 									<listOptionValue builtIn="false" value="sbc"/>
 									<listOptionValue builtIn="false" value="gflags"/>
 									<listOptionValue builtIn="false" value="glog"/>

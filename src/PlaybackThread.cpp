@@ -24,7 +24,8 @@ PlaybackThread::PlaybackThread(Connection* connection,
 	  thread_(),
 	  fd_(0),
 	  read_mtu_(0),
-	  write_mtu_(0) {
+	  write_mtu_(0),
+	  pcm_handle_(NULL) {
 }
 
 void PlaybackThread::stop() {
@@ -36,6 +37,13 @@ void PlaybackThread::stop() {
 		fd_ = 0;
 		running_ = false;
 	}
+	if (pcm_handle_) {
+		snd_pcm_close(pcm_handle_);
+		pcm_handle_ = NULL;
+	}
+}
+
+void PlaybackThread::setPcmParams() {
 }
 
 void PlaybackThread::start() {
@@ -47,6 +55,19 @@ void PlaybackThread::start() {
     		signal_stop_ = false;
             pthread_create(&thread_, NULL, threadProc, this);
             running_ = true;
+    	}
+    	int err = snd_pcm_open(&pcm_handle_, "default", SND_PCM_STREAM_PLAYBACK, 0);
+    	if (err < 0) {
+    		LOG(ERROR) << "Error opening pcm stream: " << snd_strerror(err);
+    		pcm_handle_ = NULL;
+    	} else {
+    		err = snd_pcm_set_params(pcm_handle_, SND_PCM_FORMAT_S16_LE,
+    				SND_PCM_ACCESS_RW_INTERLEAVED, 2, 44100, 0, 250000);
+			if (err < 0) {
+				LOG(ERROR) << "Error configuring pcm stream: " << snd_strerror(err);
+				snd_pcm_close(pcm_handle_);
+				pcm_handle_ = NULL;
+			};
     	}
     } else {
     	LOG(WARNING) << "Playback thread already running.";
@@ -85,8 +106,27 @@ void PlaybackThread::run() {
     }
 }
 
-void PlaybackThread::play_pcm(const uint8_t* buffer, size_t size) {
+void PlaybackThread::playPcm(const uint8_t* buffer, size_t size) {
+	snd_pcm_sframes_t frames;
 
+	if (NULL == pcm_handle_) {
+		return;
+	}
+	size /= 4;
+	while (size > 0) {
+		frames = snd_pcm_writei(pcm_handle_, buffer, size);
+		if (frames < 0) {
+			frames = snd_pcm_recover(pcm_handle_, frames, 0);
+		}
+		if (frames < 0) {
+		    LOG (ERROR) << "snd_pcm_writei failed: " << snd_strerror(frames);
+		    break;
+		}
+		if (frames > 0 && frames < (long)sizeof(buffer)) {
+			LOG(INFO) << "Short write (expected " << size << ", wrote " << frames << ")";
+		}
+		size -= frames;
+	}
 }
 
 } /* namespace dbus */

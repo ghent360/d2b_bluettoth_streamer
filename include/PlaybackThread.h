@@ -14,6 +14,7 @@
 #include "MediaTransport.h"
 #include "util.h"
 
+#include <alsa/asoundlib.h>
 #include <pthread.h>
 
 namespace dbus {
@@ -27,11 +28,12 @@ public:
 	};
 
 	virtual void decode(const uint8_t* buffer, size_t size) = 0;
-	virtual void play_pcm(const uint8_t* buffer, size_t size);
+	virtual void playPcm(const uint8_t* buffer, size_t size);
 
 	void start();
 	void stop();
 private:
+	void setPcmParams();
 
 	bool running_;
 	bool signal_stop_;
@@ -41,6 +43,8 @@ private:
 	int fd_;
 	int read_mtu_;
 	int write_mtu_;
+
+	snd_pcm_t *pcm_handle_;
 
 	static void* threadProc(void *);
 	void run();

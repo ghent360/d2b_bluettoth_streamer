@@ -33,7 +33,7 @@ void SbcDecodeThread::decode(const uint8_t* buffer, size_t size) {
 		read = sbc_decode(&codec_, buffer, size,
 				pcm_buffer_, sizeof(pcm_buffer_), &written);
 		if (read > 0) {
-			play_pcm(pcm_buffer_, written);
+			playPcm(pcm_buffer_, written);
 		} else {
 			LOG(ERROR) << "Decode error, skipping packet.";
 			break;
