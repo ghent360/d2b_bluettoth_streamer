@@ -1,1 +1,5 @@
 Makefile.in
+*.o
+bt_a2dp
+.deps/
+.libs/

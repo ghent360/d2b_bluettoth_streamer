@@ -1,1 +1,6 @@
 Makefile.in
+*.o
+*.lo
+.deps/
+.libs/
+libsbc.la
