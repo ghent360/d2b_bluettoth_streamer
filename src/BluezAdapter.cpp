@@ -16,6 +16,7 @@
 #include "MessageArgumentIterator.h"
 #include "RemoteMethod.h"
 
+#include <dbus/dbus.h>
 #include <glog/logging.h>
 
 namespace dbus {
@@ -29,6 +30,51 @@ void BluezAdapter::startDiscovery() {
 void BluezAdapter::stopDiscovery() {
 	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, STOPDISCOVERY_METHOD);
 	rpc.prepareCall();
+	connection_->sendWithReplyAndBlock(rpc, -1);
+}
+
+void BluezAdapter::setDiscoverable(bool value) {
+	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, SETPROPERTY_METHOD);
+	rpc.prepareCall();
+	auto args = rpc.argBuilder();
+	args.append(DISCOVERABLE_PROPERTY);
+	args.appendVariant(value);
+	connection_->sendWithReplyAndBlock(rpc, -1);
+}
+
+void BluezAdapter::setPairable(bool value) {
+	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, SETPROPERTY_METHOD);
+	rpc.prepareCall();
+	auto args = rpc.argBuilder();
+	args.append(PAIRABLE_PROPERTY);
+	args.appendVariant(value);
+	connection_->sendWithReplyAndBlock(rpc, -1);
+}
+
+void BluezAdapter::setPairableTimeout(uint32_t seconds) {
+	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, SETPROPERTY_METHOD);
+	rpc.prepareCall();
+	auto args = rpc.argBuilder();
+	args.append(PAIRABLETIMEOUT_PROPERTY);
+	args.appendVariant(seconds);
+	connection_->sendWithReplyAndBlock(rpc, -1);
+}
+
+void BluezAdapter::setDiscoverableTimeout(uint32_t seconds) {
+	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, SETPROPERTY_METHOD);
+	rpc.prepareCall();
+	auto args = rpc.argBuilder();
+	args.append(DISCOVERABLETIMEOUT_PROPERTY);
+	args.appendVariant(seconds);
+	connection_->sendWithReplyAndBlock(rpc, -1);
+}
+
+void BluezAdapter::setName(const char* name) {
+	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, SETPROPERTY_METHOD);
+	rpc.prepareCall();
+	auto args = rpc.argBuilder();
+	args.append(NAME_PROPERTY);
+	args.appendVariant(name);
 	connection_->sendWithReplyAndBlock(rpc, -1);
 }
 

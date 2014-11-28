@@ -45,16 +45,64 @@ public:
 				&str_value) == TRUE;
 	}
 
-	bool append(unsigned char value) {
+	bool append(uint8_t value) {
 		return dbus_message_iter_append_basic(&iter_,
 				DBUS_TYPE_BYTE,
 				&value) == TRUE;
+	}
+
+	bool append(uint32_t value) {
+		return dbus_message_iter_append_basic(&iter_,
+				DBUS_TYPE_UINT32,
+				&value) == TRUE;
+	}
+
+	bool append(uint16_t value) {
+		return dbus_message_iter_append_basic(&iter_,
+				DBUS_TYPE_UINT16,
+				&value) == TRUE;
+	}
+
+	bool append(int32_t value) {
+		return dbus_message_iter_append_basic(&iter_,
+				DBUS_TYPE_INT32,
+				&value) == TRUE;
+	}
+
+	bool append(int16_t value) {
+		return dbus_message_iter_append_basic(&iter_,
+				DBUS_TYPE_INT16,
+				&value) == TRUE;
+	}
+
+	bool append(double value) {
+		return dbus_message_iter_append_basic(&iter_,
+				DBUS_TYPE_DOUBLE,
+				&value) == TRUE;
+	}
+
+	bool append(bool value) {
+		dbus_uint32_t val = (value) ? TRUE : FALSE;
+		return dbus_message_iter_append_basic(&iter_,
+				DBUS_TYPE_BOOLEAN,
+				&val) == TRUE;
 	}
 
 	bool append(const uint8_t* value, size_t len) {
 		return dbus_message_iter_append_fixed_array(&iter_,
 				DBUS_TYPE_BYTE, &value, len) == TRUE;
 	}
+
+	bool appendVariant(const char* str);
+	bool appendVariant(const ObjectPath& path);
+	bool appendVariant(uint8_t value);
+	bool appendVariant(uint32_t value);
+	bool appendVariant(uint16_t value);
+	bool appendVariant(int32_t value);
+	bool appendVariant(int16_t value);
+	bool appendVariant(double value);
+	bool appendVariant(bool value);
+	bool appendVariant(const uint8_t* value, size_t len);
 
 	bool appendDictEntry(const char* key,
 			const char* value);

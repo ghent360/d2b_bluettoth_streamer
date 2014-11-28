@@ -20,6 +20,7 @@
 #include "ObjectPath.h"
 #include "SbcDecodeThread.h"
 #include "SbcMediaEndpoint.h"
+#include "time_util.h"
 
 #include <dbus/dbus.h>
 #include <gflags/gflags.h>
@@ -70,9 +71,21 @@ public:
 		}
 	}
 
-	bool audioSourceActive(const dbus::ObjectPath& path) const {
+	const dbus::AudioSource* audioSourceActive(
+			const dbus::ObjectPath& path) const {
 		for (const dbus::AudioSource* audio_source : audio_sources_) {
 			if (audio_source->getPathToSelf() == path) {
+                return audio_source;
+			}
+		}
+		return NULL;
+	}
+
+	bool isAudioConnected() const {
+		for (const dbus::AudioSource* audio_source : audio_sources_) {
+			auto state = audio_source->getState();
+			if (state == dbus::AudioSource::State::CONNECTED ||
+				state == dbus::AudioSource::State::PLAYING) {
                 return true;
 			}
 		}
@@ -81,7 +94,7 @@ public:
 
 	void initiateConnection() {
 		for (dbus::ObjectPath device_path : adapter_->getDevices()) {
-			if (!audioSourceActive(device_path)) {
+			if (audioSourceActive(device_path) == NULL) {
 				dbus::AudioSource* audio_src = new dbus::AudioSource(&conn_, device_path);
 				audio_src->setOnStateChangeCallback(googleapis::NewPermanentCallback(this,
 						&Application::onStateChange));
@@ -92,27 +105,42 @@ public:
 		}
 	}
 
-	void onStateChange(const char* value, const dbus::AudioSource* audio_src) {
+	void stopPlayback() {
+	    if (playback_thread_) {
+	    	playback_thread_->stop();
+	    	delete playback_thread_;
+	    	playback_thread_ = 0;
+	    }
+	}
+
+	void startPlayback() {
+		stopPlayback();
+	    playback_thread_ = new dbus::SbcDecodeThread(&conn_,
+	    		media_endpoint_->getTransportPath());
+	    playback_thread_->start();
+	}
+
+	void onStateChange(dbus::AudioSource::State value,
+			const dbus::AudioSource* audio_src) {
 		LOG(INFO) << "onStateChange " << audio_src->getPathToSelf()
 				<< " " << value;
-	    if (strcmp(value, "playing") == 0) {
+	    switch (value) {
+	    case dbus::AudioSource::State::PLAYING:
 	    	if (media_endpoint_->isTransportConfigValid()) {
-	    	    if (playback_thread_) {
-	    	    	playback_thread_->stop();
-	    	    	delete playback_thread_;
-	    	    	playback_thread_ = 0;
-	    	    }
-	    	    playback_thread_ = new dbus::SbcDecodeThread(&conn_,
-	    	    		media_endpoint_->getTransportPath());
-	    	    playback_thread_->start();
+	    		startPlayback();
 	    	}
-	    } else if (strcmp(value, "connected") == 0 ||
-	    		   strcmp(value, "disconnected") == 0) {
-		    if (playback_thread_) {
-		    	playback_thread_->stop();
-		    	delete playback_thread_;
-		    	playback_thread_ = 0;
-		    }
+	    	break;
+
+	    case dbus::AudioSource::State::CONNECTED:
+	    	stopPlayback();
+	    	break;
+
+	    case dbus::AudioSource::State::DISCONNECTED:
+	    	stopPlayback();
+	    	break;
+
+	    default:
+	    	break;
 	    }
 	}
 
@@ -125,6 +153,12 @@ public:
 
 		adapter_ = new dbus::BluezAdapter(&conn_, adapter_path);
 		adapter_media_interface_ = new dbus::BluezMedia(&conn_, adapter_path);
+
+		adapter_->setName("A2DP Raspi Sync");
+		adapter_->setDiscoverableTimeout(5*60); // 5 minutes;
+		adapter_->setPairableTimeout(5*60);
+		adapter_->setDiscoverable(true);
+		adapter_->setPairable(true);
 
 		media_endpoint_ = new dbus::SbcMediaEndpoint();
 		//media_endpoint_ = new dbus::AacMediaEndpoint();
@@ -140,8 +174,14 @@ public:
 
 		phone_connected_ = false;
 		initiateConnection();
+		uint32_t last_connect_time = timeGetTime();
 		do
 		{
+			if (!isAudioConnected() &&
+				elapsedTime(last_connect_time) > RECONNECT_TIME) {
+				initiateConnection();
+				last_connect_time = timeGetTime();
+			}
 			conn_.process(200);
 		} while (true);
 		adapter_media_interface_->unregisterEndpoint(*media_endpoint_);
@@ -149,6 +189,7 @@ public:
 		delete adapter_;
 	}
 private:
+	static const uint32_t RECONNECT_TIME = 30000;
 	dbus::Connection conn_;
 	dbus::BluezAdapter* adapter_;
 	dbus::SbcMediaEndpoint* media_endpoint_;

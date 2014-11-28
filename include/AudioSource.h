@@ -25,8 +25,15 @@ class Connection;
 class MediaEndpoint;
 class AudioSource : public SimpleObjectBase {
 public:
-	// possible values "disconnected", "connecting", "connected", "playing"
-	typedef googleapis::Callback2<const char*, const AudioSource*> OnStateChangeCallback;
+	enum State {
+		UNKNOWN = 0,
+		DISCONNECTED = 1,
+		CONNECTING = 2,
+		CONNECTED = 3,
+		PLAYING = 4
+	};
+
+	typedef googleapis::Callback2<State, const AudioSource*> OnStateChangeCallback;
 
 	AudioSource(Connection* connection, const ObjectPath& path);
 	virtual ~AudioSource();
@@ -40,11 +47,16 @@ public:
 	   		delete on_state_change_cb_;
 	   		on_state_change_cb_ = cb;
 	}
+
+	State getState() const {
+		return state_;
+	}
 private:
 	static void handle_stateChanged(const char* new_state, ObjectBase* ctx);
 
 	Connection* connection_;
 	OnStateChangeCallback* on_state_change_cb_;
+	State state_;
 
 	// DBus metadata
 	static const StringWithHash INTERFACE;

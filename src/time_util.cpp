@@ -22,3 +22,7 @@ uint32_t timeGetTime() {
 	}
 	return time.tv_sec * 1000 + time.tv_nsec / 1000000;
 }
+
+uint32_t elapsedTime(uint32_t time) {
+	return timeGetTime() - time;
+}

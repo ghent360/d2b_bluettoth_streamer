@@ -14,6 +14,56 @@
 
 namespace dbus {
 
+bool BaseMessageIterator::appendVariant(const char* str) {
+	return openContainer(DBUS_TYPE_VARIANT, DBUS_TYPE_STRING_AS_STRING)
+			.append(str);
+}
+
+bool BaseMessageIterator::appendVariant(const ObjectPath& path) {
+	return openContainer(DBUS_TYPE_VARIANT, DBUS_TYPE_OBJECT_PATH_AS_STRING)
+			.append(path);
+}
+
+bool BaseMessageIterator::appendVariant(uint8_t value) {
+	return openContainer(DBUS_TYPE_VARIANT, DBUS_TYPE_BYTE_AS_STRING)
+			.append(value);
+}
+
+bool BaseMessageIterator::appendVariant(uint32_t value) {
+	return openContainer(DBUS_TYPE_VARIANT, DBUS_TYPE_UINT32_AS_STRING)
+			.append(value);
+}
+
+bool BaseMessageIterator::appendVariant(uint16_t value) {
+	return openContainer(DBUS_TYPE_VARIANT, DBUS_TYPE_UINT16_AS_STRING)
+			.append(value);
+}
+
+bool BaseMessageIterator::appendVariant(int32_t value) {
+	return openContainer(DBUS_TYPE_VARIANT, DBUS_TYPE_INT32_AS_STRING)
+			.append(value);
+}
+
+bool BaseMessageIterator::appendVariant(int16_t value) {
+	return openContainer(DBUS_TYPE_VARIANT, DBUS_TYPE_INT16_AS_STRING)
+			.append(value);
+}
+
+bool BaseMessageIterator::appendVariant(double value) {
+	return openContainer(DBUS_TYPE_VARIANT, DBUS_TYPE_DOUBLE_AS_STRING)
+			.append(value);
+}
+
+bool BaseMessageIterator::appendVariant(bool value) {
+	return openContainer(DBUS_TYPE_VARIANT, DBUS_TYPE_BOOLEAN_AS_STRING)
+			.append(value);
+}
+
+bool BaseMessageIterator::appendVariant(const uint8_t* value, size_t len) {
+	return openContainer(DBUS_TYPE_VARIANT, DBUS_TYPE_ARRAY_AS_STRING)
+			.append(value, len);
+}
+
 const char* BaseMessageIterator::getStringForType(int type) {
 	const char* str;
 	int arg_type = getArgumentType();

@@ -50,6 +50,12 @@ public:
     void startDiscovery();
     void stopDiscovery();
 
+    void setDiscoverable(bool value);
+    void setPairable(bool value);
+    void setPairableTimeout(uint32_t seconds);
+    void setDiscoverableTimeout(uint32_t seconds);
+    void setName(const char* name);
+
     void setDeviceFoundCallback(DeviceFoundCallback* cb) {
    		delete device_found_cb_;
     	device_found_cb_ = cb;

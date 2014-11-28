@@ -17,13 +17,15 @@
 #include "MessageArgumentIterator.h"
 #include "RemoteMethod.h"
 
+#include <dbus/dbus.h>
 #include <glog/logging.h>
 
 namespace dbus {
 AudioSource::AudioSource(Connection* connection, const ObjectPath& path)
     : SimpleObjectBase(path),
 	  connection_(connection),
-	  on_state_change_cb_(NULL) {
+	  on_state_change_cb_(NULL),
+	  state_(UNKNOWN) {
 	interface_ = &implementation_;
 }
 
@@ -64,11 +66,34 @@ const StringWithHash AudioSource::GETPROPERTIES_METHOD("GetProperties");
 const StringWithHash AudioSource::PROPERTYCHANGED_SIGNAL("PropertyChanged");
 const StringWithHash AudioSource::STATE_PROPERTY("State");
 
+static const StringWithHash STATE_CONNECTING("connecting");
+static const StringWithHash STATE_CONNECTED("connected");
+static const StringWithHash STATE_DISCONNECTED("disconnected");
+static const StringWithHash STATE_PLAYING("playing");
+
+static AudioSource::State convertStateValue(const char* value_str) {
+	StringWithHash value(value_str);
+	if (value == STATE_CONNECTING) {
+		return AudioSource::State::CONNECTING;
+	}
+	if (value == STATE_CONNECTED) {
+		return AudioSource::State::CONNECTED;
+	}
+	if (value == STATE_DISCONNECTED) {
+		return AudioSource::State::DISCONNECTED;
+	}
+	if (value == STATE_PLAYING) {
+		return AudioSource::State::PLAYING;
+	}
+	return AudioSource::State::UNKNOWN;
+}
+
 void AudioSource::handle_stateChanged(const char* new_state, ObjectBase* ctx) {
 	AudioSource* pThis = reinterpret_cast<AudioSource*>(ctx);
+	pThis->state_ = convertStateValue(new_state);
 	if (pThis->on_state_change_cb_) {
 		bool once = !pThis->on_state_change_cb_->IsRepeatable();
-		pThis->on_state_change_cb_->Run(new_state, pThis);
+		pThis->on_state_change_cb_->Run(pThis->state_, pThis);
 		if (once) {
 			pThis->on_state_change_cb_ = NULL;
 		}
