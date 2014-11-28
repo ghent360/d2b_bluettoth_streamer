@@ -84,6 +84,9 @@ Message Connection::sendWithReplyAndBlock(Message& msg, int timeout_msec) {
 			msg.msg(),
 			timeout_msec,
 			&err);
+	if (dbus_error_is_set(&err)) {
+		msg.dump("Error calling: ");
+	}
 	handleError(&err, __FUNCTION__, __LINE__);
 	return reply;
 }

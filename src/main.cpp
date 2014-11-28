@@ -128,7 +128,14 @@ public:
 
 		media_endpoint_ = new dbus::SbcMediaEndpoint();
 		//media_endpoint_ = new dbus::AacMediaEndpoint();
-		adapter_media_interface_->registerEndpoint(*media_endpoint_);
+		if (!adapter_media_interface_->registerEndpoint(*media_endpoint_)) {
+			LOG(ERROR) << "Unable to register the A2DP sync. Check if bluez \n"
+					"has audio support and the configuration is enabled.";
+			delete media_endpoint_;
+			delete adapter_media_interface_;
+			delete adapter_;
+			return;
+		}
 		conn_.addObject(media_endpoint_);
 
 		phone_connected_ = false;
