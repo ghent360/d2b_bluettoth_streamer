@@ -17,8 +17,6 @@
 #include "BluezNames.h"
 #include "Connection.h"
 #include "DictionaryHelper.h"
-//#include "Message.h"
-//#include "MessageArgumentIterator.h"
 #include "ObjectPath.h"
 #include "SbcDecodeThread.h"
 #include "SbcMediaEndpoint.h"
@@ -29,13 +27,15 @@
 #include <glog/logging.h>
 #include <stdint.h>
 
+DEFINE_bool(autoconnect, false, "Connect to known devices automatically.");
+DEFINE_bool(discover_on_start, false, "Always start the discovery procedure.");
+
 class Application {
 public:
 	Application()
         : adapter_(NULL),
 		  media_endpoint_(NULL),
 		  adapter_media_interface_(NULL),
-		  phone_connected_(false),
 		  playback_thread_(NULL) {
 	}
 
@@ -73,7 +73,7 @@ public:
 		}
 	}
 
-	dbus::AudioSource* audioSourceActive(const dbus::ObjectPath& path) {
+	dbus::AudioSource* findAudioSource(const dbus::ObjectPath& path) {
 		for (dbus::AudioSource* audio_source : audio_sources_) {
 			if (audio_source->getPathToSelf() == path) {
                 return audio_source;
@@ -94,8 +94,9 @@ public:
 	}
 
 	void initiateConnection() {
+		adapter_->refreshProperties();
 		for (dbus::ObjectPath device_path : adapter_->getDevices()) {
-			dbus::AudioSource* audio_src = audioSourceActive(device_path);
+			dbus::AudioSource* audio_src = findAudioSource(device_path);
 			if (audio_src == NULL) {
 				audio_src = new dbus::AudioSource(&conn_, device_path);
 				audio_src->setOnStateChangeCallback(googleapis::NewPermanentCallback(this,
@@ -103,9 +104,12 @@ public:
 				audio_sources_.push_back(audio_src);
 				conn_.addObject(audio_src);
 			}
-			audio_src->connectAsync(-1, NULL);
+			if (FLAGS_autoconnect) {
+				audio_src->connectAsync(-1, NULL);
+			}
 		}
-		if (audio_sources_.empty()) {
+		if (audio_sources_.empty() && !adapter_->getDiscovering()) {
+			LOG(INFO) << "No paired devices, start discovery.";
 			adapter_->startDiscovery();
 		}
 	}
@@ -173,6 +177,10 @@ public:
 		}
 	}
 
+	void onDeviceCreated(const dbus::ObjectPath& path) {
+		LOG(INFO) << "Device created: " << path;
+	}
+
 	void loop() {
 		dbus::ObjectPath adapter_path;
 		if (!getAdapterPath("", &adapter_path)) {
@@ -186,6 +194,9 @@ public:
 
 		adapter_->setDeviceFoundCallback(googleapis::NewPermanentCallback(
 				this, &Application::onDeviceDiscovered));
+		adapter_->setDeviceCreatedCallback(googleapis::NewPermanentCallback(
+				this, &Application::onDeviceCreated));
+
 		adapter_->setName("A2DP Raspi Sync");
 		adapter_->setDiscoverableTimeout(5*60); // 5 minutes;
 		adapter_->setPairableTimeout(5*60);
@@ -204,7 +215,9 @@ public:
 		}
 		conn_.addObject(media_endpoint_);
 
-		phone_connected_ = false;
+		if (FLAGS_discover_on_start) {
+			adapter_->startDiscovery();
+		}
 		initiateConnection();
 		uint32_t last_connect_time = timeGetTime();
 		do
@@ -226,7 +239,6 @@ private:
 	dbus::BluezAdapter* adapter_;
 	dbus::SbcMediaEndpoint* media_endpoint_;
 	dbus::BluezMedia* adapter_media_interface_;
-	bool phone_connected_;
 	dbus::PlaybackThread* playback_thread_;
 	std::list<dbus::AudioSource*> audio_sources_;
 };

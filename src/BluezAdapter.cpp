@@ -25,12 +25,14 @@ void BluezAdapter::startDiscovery() {
 	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, STARTDISCOVERY_METHOD);
 	rpc.prepareCall();
 	connection_->sendWithReplyAndBlock(rpc, -1);
+	discovering_ = true;
 }
 
 void BluezAdapter::stopDiscovery() {
 	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, STOPDISCOVERY_METHOD);
 	rpc.prepareCall();
 	connection_->sendWithReplyAndBlock(rpc, -1);
+	discovering_ = false;
 }
 
 void BluezAdapter::setDiscoverable(bool value) {
@@ -40,6 +42,7 @@ void BluezAdapter::setDiscoverable(bool value) {
 	args.append(DISCOVERABLE_PROPERTY);
 	args.appendVariant(value);
 	connection_->sendWithReplyAndBlock(rpc, -1);
+	discoverable_ = value;
 }
 
 void BluezAdapter::setPairable(bool value) {
@@ -49,6 +52,7 @@ void BluezAdapter::setPairable(bool value) {
 	args.append(PAIRABLE_PROPERTY);
 	args.appendVariant(value);
 	connection_->sendWithReplyAndBlock(rpc, -1);
+	pairable_ = value;
 }
 
 void BluezAdapter::setPairableTimeout(uint32_t seconds) {
@@ -58,6 +62,7 @@ void BluezAdapter::setPairableTimeout(uint32_t seconds) {
 	args.append(PAIRABLETIMEOUT_PROPERTY);
 	args.appendVariant(seconds);
 	connection_->sendWithReplyAndBlock(rpc, -1);
+	pairable_timeout_ = seconds;
 }
 
 void BluezAdapter::setDiscoverableTimeout(uint32_t seconds) {
@@ -67,6 +72,7 @@ void BluezAdapter::setDiscoverableTimeout(uint32_t seconds) {
 	args.append(DISCOVERABLETIMEOUT_PROPERTY);
 	args.appendVariant(seconds);
 	connection_->sendWithReplyAndBlock(rpc, -1);
+	discoverable_timeout_ = seconds;
 }
 
 void BluezAdapter::setName(const char* name) {
@@ -76,6 +82,7 @@ void BluezAdapter::setName(const char* name) {
 	args.append(NAME_PROPERTY);
 	args.appendVariant(name);
 	connection_->sendWithReplyAndBlock(rpc, -1);
+	name_ = name;
 }
 
 const StringWithHash BluezAdapter::INTERFACE = "org.bluez.Adapter";
@@ -112,26 +119,46 @@ const char* BluezAdapter::DISCOVERING_PROPERTY = "Discovering";
 const char* BluezAdapter::DEVICES_PROPERTY = "Devices";
 const char* BluezAdapter::UUIDS_PROPERTY = "UUIDs";
 
-std::list<ObjectPath> BluezAdapter::getDevices() {
+void BluezAdapter::refreshProperties() {
 	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf().str(), INTERFACE.str(), GETPROPERTIES_METHOD.str());
 	rpc.prepareCall();
 	Message reply = connection_->sendWithReplyAndBlock(rpc, -1);
-	std::list<ObjectPath> result;
-	if (!reply.msg()) {
-		LOG(ERROR) << "Error calling " << INTERFACE.str() << "." << GETPROPERTIES_METHOD.str();
-	} else {
+	if (reply.msg()) {
 		MessageArgumentIterator iter = reply.argIterator();
 		if (iter.hasArgs()) {
 			DictionaryHelper dict(&iter);
-			auto adapter_iter = dict.getArray(DEVICES_PROPERTY).recurse();
-			while (DBUS_TYPE_OBJECT_PATH == adapter_iter.getArgumentType()) {
-				ObjectPath adapter = adapter_iter.getObjectPath();
-				result.push_back(adapter);
-				adapter_iter.next();
+
+			devices_.clear();
+			auto devices_iter = dict.getArray(DEVICES_PROPERTY).recurse();
+			while (DBUS_TYPE_OBJECT_PATH == devices_iter.getArgumentType()) {
+				ObjectPath adapter = devices_iter.getObjectPath();
+				devices_.push_back(adapter);
+				devices_iter.next();
 			};
+
+			uuids_.clear();
+			auto uuid_iter = dict.getArray(UUIDS_PROPERTY).recurse();
+			while (DBUS_TYPE_STRING == uuid_iter.getArgumentType()) {
+				const char* uuid = uuid_iter.getString();
+				uuids_.push_back(uuid);
+				uuid_iter.next();
+			};
+
+			powered_ = dict.getBool(POWERED_PROPERTY);
+			discovering_ = dict.getBool(DISCOVERING_PROPERTY);
+			discoverable_ = dict.getBool(DISCOVERABLE_PROPERTY);
+			pairable_ = dict.getBool(PAIRABLE_PROPERTY);
+
+			discoverable_timeout_ = dict.getUint32(DISCOVERABLETIMEOUT_PROPERTY);
+			pairable_timeout_ = dict.getUint32(PAIRABLETIMEOUT_PROPERTY);
+			class_ = dict.getUint32(CLASS_PROPERTY);
+
+			name_ = dict.getString(NAME_PROPERTY);
+			address_ = dict.getString(ADDRESS_PROPERTY);
 		}
+	} else {
+		LOG(ERROR) << "Error calling " << INTERFACE.str() << "." << GETPROPERTIES_METHOD.str();
 	}
-	return result;
 }
 
 Message BluezAdapter::handle_DeviceFound(Message& msg, ObjectBase* ctx,

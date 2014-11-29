@@ -39,6 +39,11 @@ public:
 		return value.getBool();
 	}
 
+	uint32_t getUint32(const char* name) {
+		BaseMessageIterator value = dict_[name];
+		return value.getUint32();
+	}
+
 	BaseMessageIterator getArray(const char* name) {
 		BaseMessageIterator value = dict_[name];
 		int type = value.getArgumentType();

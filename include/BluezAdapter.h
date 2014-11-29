@@ -36,7 +36,14 @@ public:
 		  device_found_cb_(NULL),
 		  device_disappeared_cb_(NULL),
 		  device_created_cb_(NULL),
-		  device_removed_cb_(NULL) {
+		  device_removed_cb_(NULL),
+		  class_(0),
+		  powered_(false),
+		  discoverable_(false),
+		  pairable_(false),
+		  discovering_(false),
+		  pairable_timeout_(0),
+		  discoverable_timeout_(0) {
 		interface_ = &implementation_;
 	}
 	~BluezAdapter() {
@@ -46,7 +53,6 @@ public:
 		delete device_removed_cb_;
 	}
 
-	std::list<ObjectPath> getDevices();
     void startDiscovery();
     void stopDiscovery();
 
@@ -55,6 +61,28 @@ public:
     void setPairableTimeout(uint32_t seconds);
     void setDiscoverableTimeout(uint32_t seconds);
     void setName(const char* name);
+
+	void refreshProperties();
+
+	const std::list<ObjectPath> getDevices() const {
+		return devices_;
+	}
+
+    bool getDiscovering() const {
+    	return discovering_;
+    }
+    bool getDiscoverable() const {
+    	return discoverable_;
+    }
+    bool getPairable() const {
+    	return pairable_;
+    }
+    bool getPowered() const {
+    	return powered_;
+    }
+    uint32_t getClass() const {
+    	return class_;
+    }
 
     void setDeviceFoundCallback(DeviceFoundCallback* cb) {
    		delete device_found_cb_;
@@ -91,6 +119,18 @@ private:
 	DeviceDisappearedCallback* device_disappeared_cb_;
 	DeviceListCallback* device_created_cb_;
 	DeviceListCallback* device_removed_cb_;
+
+	std::list<ObjectPath> devices_;
+	std::string name_;
+	std::string address_;
+	uint32_t class_;
+	bool powered_;
+	bool discoverable_;
+	bool pairable_;
+	bool discovering_;
+	uint32_t pairable_timeout_;
+	uint32_t discoverable_timeout_;
+	std::list<std::string> uuids_;
 
 	// DBus metadata
 	static const StringWithHash INTERFACE;
