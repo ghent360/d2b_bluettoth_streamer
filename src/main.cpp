@@ -73,9 +73,8 @@ public:
 		}
 	}
 
-	const dbus::AudioSource* audioSourceActive(
-			const dbus::ObjectPath& path) const {
-		for (const dbus::AudioSource* audio_source : audio_sources_) {
+	dbus::AudioSource* audioSourceActive(const dbus::ObjectPath& path) {
+		for (dbus::AudioSource* audio_source : audio_sources_) {
 			if (audio_source->getPathToSelf() == path) {
                 return audio_source;
 			}
@@ -96,14 +95,15 @@ public:
 
 	void initiateConnection() {
 		for (dbus::ObjectPath device_path : adapter_->getDevices()) {
-			if (audioSourceActive(device_path) == NULL) {
-				dbus::AudioSource* audio_src = new dbus::AudioSource(&conn_, device_path);
+			dbus::AudioSource* audio_src = audioSourceActive(device_path);
+			if (audio_src == NULL) {
+				audio_src = new dbus::AudioSource(&conn_, device_path);
 				audio_src->setOnStateChangeCallback(googleapis::NewPermanentCallback(this,
 						&Application::onStateChange));
 				audio_sources_.push_back(audio_src);
 				conn_.addObject(audio_src);
-				audio_src->connectAsync(-1, NULL);
 			}
+			audio_src->connectAsync(-1, NULL);
 		}
 		if (audio_sources_.empty()) {
 			adapter_->startDiscovery();
@@ -211,6 +211,7 @@ public:
 		{
 			if (!isAudioConnected() &&
 				elapsedTime(last_connect_time) > RECONNECT_TIME) {
+				LOG(INFO) << "Nothing connected for a while. Retry.";
 				initiateConnection();
 				last_connect_time = timeGetTime();
 			}
