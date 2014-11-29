@@ -9,6 +9,7 @@
  */
 
 #include "BluezAdapter.h"
+#include "BluezAgent.h"
 #include "BluezNames.h"
 #include "Connection.h"
 #include "DictionaryHelper.h"
@@ -83,6 +84,33 @@ void BluezAdapter::setName(const char* name) {
 	args.appendVariant(name);
 	connection_->sendWithReplyAndBlock(rpc, -1);
 	name_ = name;
+}
+
+void BluezAdapter::registerAgent(const ObjectPath& path, const char* capability) {
+	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, REGISTERAGENT_METHOD);
+	rpc.prepareCall();
+	auto args = rpc.argBuilder();
+	args.append(path);
+	args.append(capability);
+	Message response = connection_->sendWithReplyAndBlock(rpc, -1);
+	response.dump("registerAgent:");
+}
+
+void BluezAdapter::unregisterAgent(const ObjectPath& path) {
+	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, UNREGISTERAGENT_METHOD);
+	rpc.prepareCall();
+	auto args = rpc.argBuilder();
+	args.append(path);
+	Message response = connection_->sendWithReplyAndBlock(rpc, -1);
+	response.dump("unregisterAgent:");
+}
+
+void BluezAdapter::registerAgent(BluezAgent* agent) {
+	registerAgent(agent->getPathToSelf(), agent->getCapabilities());
+}
+
+void BluezAdapter::unregisterAgent(BluezAgent* agent) {
+	unregisterAgent(agent->getPathToSelf());
 }
 
 const StringWithHash BluezAdapter::INTERFACE = "org.bluez.Adapter";

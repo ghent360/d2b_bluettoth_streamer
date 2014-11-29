@@ -12,6 +12,7 @@
 #include "AacMediaEndpoint.h"
 #include "AudioSource.h"
 #include "BluezAdapter.h"
+#include "BluezAgent.h"
 #include "BluezManager.h"
 #include "BluezMedia.h"
 #include "BluezNames.h"
@@ -34,6 +35,7 @@ class Application {
 public:
 	Application()
         : adapter_(NULL),
+		  agent_(NULL),
 		  media_endpoint_(NULL),
 		  adapter_media_interface_(NULL),
 		  playback_thread_(NULL) {
@@ -108,9 +110,18 @@ public:
 				audio_src->connectAsync(-1, NULL);
 			}
 		}
-		if (audio_sources_.empty() && !adapter_->getDiscovering()) {
-			LOG(INFO) << "No paired devices, start discovery.";
+	}
+
+	void startDiscovery() {
+		LOG(INFO) << "Start discovery.";
+		if (!adapter_->getDiscovering()) {
 			adapter_->startDiscovery();
+		}
+		if (!adapter_->getDiscoverable()) {
+			adapter_->setDiscoverable(true);
+		}
+		if (!adapter_->getPairable()) {
+			adapter_->setPairable(true);
 		}
 	}
 
@@ -142,6 +153,9 @@ public:
 
 	    case dbus::AudioSource::State::CONNECTED:
 	    	stopPlayback();
+	    	adapter_->setDiscoverable(false);
+	    	adapter_->setPairable(false);
+	    	adapter_->stopDiscovery();
 	    	break;
 
 	    case dbus::AudioSource::State::DISCONNECTED:
@@ -177,8 +191,17 @@ public:
 		}
 	}
 
-	void onDeviceCreated(const dbus::ObjectPath& path) {
-		LOG(INFO) << "Device created: " << path;
+	void onDeviceCreated(const dbus::ObjectPath& device_path) {
+		LOG(INFO) << "Device created: " << device_path;
+		dbus::AudioSource* audio_src = findAudioSource(device_path);
+		if (audio_src == NULL) {
+			audio_src = new dbus::AudioSource(&conn_, device_path);
+			audio_src->setOnStateChangeCallback(googleapis::NewPermanentCallback(this,
+					&Application::onStateChange));
+			audio_sources_.push_back(audio_src);
+			conn_.addObject(audio_src);
+			audio_src->connectAsync(-1, NULL);
+		}
 	}
 
 	void loop() {
@@ -190,6 +213,11 @@ public:
 
 		adapter_ = new dbus::BluezAdapter(&conn_, adapter_path);
 		conn_.addObject(adapter_);
+
+		agent_ = new dbus::SimpleBluezAgent(&conn_, 2014);
+		conn_.addObject(agent_);
+
+		adapter_->registerAgent(agent_);
 		adapter_media_interface_ = new dbus::BluezMedia(&conn_, adapter_path);
 
 		adapter_->setDeviceFoundCallback(googleapis::NewPermanentCallback(
@@ -197,11 +225,9 @@ public:
 		adapter_->setDeviceCreatedCallback(googleapis::NewPermanentCallback(
 				this, &Application::onDeviceCreated));
 
-		adapter_->setName("A2DP Raspi Sync");
+		adapter_->setName("Raspberry Sync");
 		adapter_->setDiscoverableTimeout(5*60); // 5 minutes;
 		adapter_->setPairableTimeout(5*60);
-		adapter_->setDiscoverable(true);
-		adapter_->setPairable(true);
 
 		media_endpoint_ = new dbus::SbcMediaEndpoint();
 		//media_endpoint_ = new dbus::AacMediaEndpoint();
@@ -220,6 +246,9 @@ public:
 		}
 		initiateConnection();
 		uint32_t last_connect_time = timeGetTime();
+		if (audio_sources_.empty()) {
+			startDiscovery();
+		}
 		do
 		{
 			if (!isAudioConnected() &&
@@ -227,6 +256,7 @@ public:
 				LOG(INFO) << "Nothing connected for a while. Retry.";
 				initiateConnection();
 				last_connect_time = timeGetTime();
+				startDiscovery();
 			}
 			conn_.process(100); // 100ms timeout
 		} while (true);
@@ -234,9 +264,10 @@ public:
 		delete adapter_media_interface_;
 	}
 private:
-	static const uint32_t RECONNECT_TIME = 30000;
+	static const uint32_t RECONNECT_TIME = 15000;
 	dbus::Connection conn_;
 	dbus::BluezAdapter* adapter_;
+	dbus::BluezAgent* agent_;
 	dbus::SbcMediaEndpoint* media_endpoint_;
 	dbus::BluezMedia* adapter_media_interface_;
 	dbus::PlaybackThread* playback_thread_;

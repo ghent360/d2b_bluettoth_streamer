@@ -23,7 +23,7 @@
 namespace dbus {
 
 class Connection;
-
+class BluezAgent;
 class BluezAdapter : public SimpleObjectBase {
 public:
 	typedef googleapis::Callback2<const char*, BaseMessageIterator*> DeviceFoundCallback;
@@ -104,6 +104,10 @@ public:
    		device_removed_cb_ = cb;
     }
 
+    void registerAgent(BluezAgent*);
+    void registerAgent(const ObjectPath&, const char*);
+    void unregisterAgent(BluezAgent*);
+    void unregisterAgent(const ObjectPath&);
 private:
 	static Message handle_DeviceFound(Message& msg, ObjectBase* ctx,
 			const InterfaceImplementation* interface);
