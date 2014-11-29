@@ -1,7 +1,7 @@
 /*
  * BluezAdapter.h
  *
- *  Created on: NOv 18, 2014
+ *  Created on: Nov 18, 2014
  *      Author: Venelin Efremov
  *
  * Copyright (C) Venelin Efremov 2014
