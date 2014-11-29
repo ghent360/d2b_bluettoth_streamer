@@ -28,8 +28,43 @@
 #include <glog/logging.h>
 #include <stdint.h>
 
-DEFINE_bool(autoconnect, false, "Connect to known devices automatically.");
-DEFINE_bool(discover_on_start, false, "Always start the discovery procedure.");
+DEFINE_bool(autoconnect, true, "Connect to known devices automatically.");
+
+class MyAudioSource : public dbus::AudioSource {
+public:
+	MyAudioSource(dbus::Connection* connection, const dbus::ObjectPath& path)
+        : dbus::AudioSource(connection, path),
+		  last_connect_time_(0),
+		  last_play_time_(0) {}
+
+	void connectAsync() {
+		last_connect_time_ = timeGetTime();
+		dbus::AudioSource::connectAsync(-1, NULL);
+	}
+
+	void disconnectAsync() {
+		dbus::AudioSource::disconnectAsync(-1, NULL);
+	}
+
+	uint32_t getLastConenctTime() const {
+		return last_connect_time_;
+	}
+
+	uint32_t getLastPlayTime() const {
+		return last_play_time_;
+	}
+protected:
+	virtual void onStateChanged(State new_state) {
+		if (state_ == dbus::AudioSource::State::PLAYING &&
+		    new_state != dbus::AudioSource::State::PLAYING) {
+			last_play_time_ = timeGetTime();
+		}
+		dbus::AudioSource::onStateChanged(new_state);
+	}
+private:
+	uint32_t last_connect_time_;
+	uint32_t last_play_time_;
+};
 
 class Application {
 public:
@@ -38,7 +73,8 @@ public:
 		  agent_(NULL),
 		  media_endpoint_(NULL),
 		  adapter_media_interface_(NULL),
-		  playback_thread_(NULL) {
+		  playback_thread_(NULL),
+		  last_connect_time_(0) {
 	}
 
 	virtual ~Application() {
@@ -64,19 +100,8 @@ public:
 	    return path->isValid();
 	}
 
-	void onAudioConnected(dbus::AudioSource* device, dbus::Message* result) {
-		if (result == NULL) {
-			LOG(ERROR) << "Connect timout " << device->getPathToSelf();
-		} else if (result->getType() == DBUS_MESSAGE_TYPE_ERROR ){
-			LOG(ERROR) << "Connect error " << device->getPathToSelf();
-			result->dump("");
-		} else {
-			LOG(INFO) << "Connected " << device->getPathToSelf();
-		}
-	}
-
-	dbus::AudioSource* findAudioSource(const dbus::ObjectPath& path) {
-		for (dbus::AudioSource* audio_source : audio_sources_) {
+	MyAudioSource* findAudioSource(const dbus::ObjectPath& path) {
+		for (MyAudioSource* audio_source : audio_sources_) {
 			if (audio_source->getPathToSelf() == path) {
                 return audio_source;
 			}
@@ -84,30 +109,30 @@ public:
 		return NULL;
 	}
 
-	bool isAudioConnected() const {
-		for (const dbus::AudioSource* audio_source : audio_sources_) {
+	MyAudioSource* sourceConnected() {
+		for (MyAudioSource* audio_source : audio_sources_) {
 			auto state = audio_source->getState();
 			if (state == dbus::AudioSource::State::CONNECTED ||
 				state == dbus::AudioSource::State::PLAYING) {
-                return true;
+				return audio_source;
 			}
 		}
-		return false;
+		return NULL;
 	}
 
 	void initiateConnection() {
 		adapter_->refreshProperties();
 		for (dbus::ObjectPath device_path : adapter_->getDevices()) {
-			dbus::AudioSource* audio_src = findAudioSource(device_path);
+			MyAudioSource* audio_src = findAudioSource(device_path);
 			if (audio_src == NULL) {
-				audio_src = new dbus::AudioSource(&conn_, device_path);
+				audio_src = new MyAudioSource(&conn_, device_path);
 				audio_src->setOnStateChangeCallback(googleapis::NewPermanentCallback(this,
 						&Application::onStateChange));
 				audio_sources_.push_back(audio_src);
 				conn_.addObject(audio_src);
 			}
 			if (FLAGS_autoconnect) {
-				audio_src->connectAsync(-1, NULL);
+				audio_src->connectAsync();
 			}
 		}
 	}
@@ -122,6 +147,20 @@ public:
 		}
 		if (!adapter_->getPairable()) {
 			adapter_->setPairable(true);
+		}
+	}
+
+	void stopDiscovery() {
+		LOG(INFO) << "Stop discovery.";
+		adapter_->refreshProperties();
+		if (adapter_->getDiscovering()) {
+			adapter_->stopDiscovery();
+		}
+		if (adapter_->getDiscoverable()) {
+			adapter_->setDiscoverable(false);
+		}
+		if (adapter_->getPairable()) {
+			adapter_->setPairable(false);
 		}
 	}
 
@@ -141,7 +180,9 @@ public:
 	}
 
 	void onStateChange(dbus::AudioSource::State value,
-			const dbus::AudioSource* audio_src) {
+			const dbus::AudioSource* ctx) {
+		const MyAudioSource* audio_src = reinterpret_cast<const MyAudioSource*>(ctx);
+		dbus::AudioSource::State prev_state = audio_src->getState();
 		LOG(INFO) << "onStateChange " << audio_src->getPathToSelf()
 				<< " " << value;
 	    switch (value) {
@@ -152,14 +193,33 @@ public:
 	    	break;
 
 	    case dbus::AudioSource::State::CONNECTED:
-	    	stopPlayback();
-	    	adapter_->setDiscoverable(false);
-	    	adapter_->setPairable(false);
-	    	adapter_->stopDiscovery();
+	    	if (prev_state == dbus::AudioSource::State::PLAYING) {
+	    		stopPlayback();
+	    	}
+	    	stopDiscovery();
 	    	break;
 
 	    case dbus::AudioSource::State::DISCONNECTED:
-	    	stopPlayback();
+	    	if (prev_state == dbus::AudioSource::State::PLAYING) {
+	    		stopPlayback();
+	    	}
+	    	break;
+
+	    case dbus::AudioSource::State::CONNECTING:
+	    	if (elapsedTime(audio_src->getLastConenctTime()) > CONNECT_TIMEOUT) {
+	    		LOG(INFO) << "Device initiated connect.";
+    			MyAudioSource* current = sourceConnected();
+				last_connect_time_ = timeGetTime();
+    			if (NULL != current) {
+    				dbus::AudioSource::State current_state = current->getState();
+    				uint32_t time_since_last_play = elapsedTime(current->getLastPlayTime());
+    				if (current_state != dbus::AudioSource::State::PLAYING &&
+    					time_since_last_play > PLAY_TIMEOUT) {
+    					LOG(INFO) << "Disconnecting " << current->getPathToSelf();
+    					current->disconnectAsync();
+    				}
+	    		}
+	    	}
 	    	break;
 
 	    default:
@@ -179,28 +239,16 @@ public:
 		return false;
 	}
 
-	void onDeviceDiscovered(const char* bt_address, dbus::BaseMessageIterator* property_iterator) {
-		dbus::DictionaryHelper properties(property_iterator);
-		const char* name = properties.getString("Name");
-		bool paired = properties.getBool("Paired");
-		//bool trusted = properties.getBool("Trusted");
-		auto services = properties.getArray("UUIDs");
-		LOG(INFO) << "Discovered " << bt_address << " " << name;
-		if (!paired && supports(services, dbus::UIID_AUDIOSOURCE)) {
-			LOG(INFO) << "Try to pair with " << name;
-		}
-	}
-
 	void onDeviceCreated(const dbus::ObjectPath& device_path) {
 		LOG(INFO) << "Device created: " << device_path;
-		dbus::AudioSource* audio_src = findAudioSource(device_path);
+		MyAudioSource* audio_src = findAudioSource(device_path);
 		if (audio_src == NULL) {
-			audio_src = new dbus::AudioSource(&conn_, device_path);
+			audio_src = new MyAudioSource(&conn_, device_path);
 			audio_src->setOnStateChangeCallback(googleapis::NewPermanentCallback(this,
 					&Application::onStateChange));
 			audio_sources_.push_back(audio_src);
 			conn_.addObject(audio_src);
-			audio_src->connectAsync(-1, NULL);
+			audio_src->connectAsync();
 		}
 	}
 
@@ -220,8 +268,6 @@ public:
 		adapter_->registerAgent(agent_);
 		adapter_media_interface_ = new dbus::BluezMedia(&conn_, adapter_path);
 
-		adapter_->setDeviceFoundCallback(googleapis::NewPermanentCallback(
-				this, &Application::onDeviceDiscovered));
 		adapter_->setDeviceCreatedCallback(googleapis::NewPermanentCallback(
 				this, &Application::onDeviceCreated));
 
@@ -241,21 +287,18 @@ public:
 		}
 		conn_.addObject(media_endpoint_);
 
-		if (FLAGS_discover_on_start) {
-			adapter_->startDiscovery();
-		}
 		initiateConnection();
-		uint32_t last_connect_time = timeGetTime();
+		last_connect_time_ = timeGetTime();
 		if (audio_sources_.empty()) {
 			startDiscovery();
 		}
 		do
 		{
-			if (!isAudioConnected() &&
-				elapsedTime(last_connect_time) > RECONNECT_TIME) {
+			if (NULL == sourceConnected() &&
+				elapsedTime(last_connect_time_) > RECONNECT_TIME) {
 				LOG(INFO) << "Nothing connected for a while. Retry.";
 				initiateConnection();
-				last_connect_time = timeGetTime();
+				last_connect_time_ = timeGetTime();
 				startDiscovery();
 			}
 			conn_.process(100); // 100ms timeout
@@ -265,13 +308,17 @@ public:
 	}
 private:
 	static const uint32_t RECONNECT_TIME = 15000;
+	static const uint32_t CONNECT_TIMEOUT = 10000;
+	static const uint32_t PLAY_TIMEOUT = 15000;
+
 	dbus::Connection conn_;
 	dbus::BluezAdapter* adapter_;
 	dbus::BluezAgent* agent_;
 	dbus::SbcMediaEndpoint* media_endpoint_;
 	dbus::BluezMedia* adapter_media_interface_;
 	dbus::PlaybackThread* playback_thread_;
-	std::list<dbus::AudioSource*> audio_sources_;
+	uint32_t last_connect_time_;
+	std::list<MyAudioSource*> audio_sources_;
 };
 
 int main(int argc, char *argv[]) {

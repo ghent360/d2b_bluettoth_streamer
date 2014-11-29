@@ -23,9 +23,9 @@
 namespace dbus {
 AudioSource::AudioSource(Connection* connection, const ObjectPath& path)
     : SimpleObjectBase(path),
+	  state_(UNKNOWN),
 	  connection_(connection),
-	  on_state_change_cb_(NULL),
-	  state_(UNKNOWN) {
+	  on_state_change_cb_(NULL) {
 	interface_ = &implementation_;
 }
 
@@ -56,6 +56,17 @@ void AudioSource::disconnectAsync(int timeout, googleapis::Callback1<Message*>* 
 	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, DISCONNECT_METHOD);
 	rpc.prepareCall();
 	connection_->send(rpc, timeout, cb);
+}
+
+void AudioSource::onStateChanged(State new_state) {
+	if (on_state_change_cb_) {
+		bool once = !on_state_change_cb_->IsRepeatable();
+		on_state_change_cb_->Run(new_state, this);
+		if (once) {
+			on_state_change_cb_ = NULL;
+		}
+	}
+	state_ = new_state;
 }
 
 const StringWithHash AudioSource::INTERFACE("org.bluez.AudioSource");
@@ -90,14 +101,7 @@ static AudioSource::State convertStateValue(const char* value_str) {
 
 void AudioSource::handle_stateChanged(const char* new_state, ObjectBase* ctx) {
 	AudioSource* pThis = reinterpret_cast<AudioSource*>(ctx);
-	pThis->state_ = convertStateValue(new_state);
-	if (pThis->on_state_change_cb_) {
-		bool once = !pThis->on_state_change_cb_->IsRepeatable();
-		pThis->on_state_change_cb_->Run(pThis->state_, pThis);
-		if (once) {
-			pThis->on_state_change_cb_ = NULL;
-		}
-	}
+	pThis->onStateChanged(convertStateValue(new_state));
 }
 
 const MethodDescriptor AudioSource::interfaceMethods_[] = {

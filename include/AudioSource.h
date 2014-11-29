@@ -51,12 +51,15 @@ public:
 	State getState() const {
 		return state_;
 	}
+protected:
+	virtual void onStateChanged(State new_state);
+
+	State state_;
 private:
 	static void handle_stateChanged(const char* new_state, ObjectBase* ctx);
 
 	Connection* connection_;
 	OnStateChangeCallback* on_state_change_cb_;
-	State state_;
 
 	// DBus metadata
 	static const StringWithHash INTERFACE;
