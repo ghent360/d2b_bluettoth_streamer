@@ -14,9 +14,11 @@
 #include "BluezAdapter.h"
 #include "BluezManager.h"
 #include "BluezMedia.h"
+#include "BluezNames.h"
 #include "Connection.h"
-#include "Message.h"
-#include "MessageArgumentIterator.h"
+#include "DictionaryHelper.h"
+//#include "Message.h"
+//#include "MessageArgumentIterator.h"
 #include "ObjectPath.h"
 #include "SbcDecodeThread.h"
 #include "SbcMediaEndpoint.h"
@@ -103,6 +105,9 @@ public:
 				audio_src->connectAsync(-1, NULL);
 			}
 		}
+		if (audio_sources_.empty()) {
+			adapter_->startDiscovery();
+		}
 	}
 
 	void stopPlayback() {
@@ -144,6 +149,30 @@ public:
 	    }
 	}
 
+	bool supports(dbus::BaseMessageIterator& iterator, const char* service_uuid) {
+		auto services = iterator.recurse();
+		while (services.getArgumentType() == DBUS_TYPE_STRING) {
+			const char* service_id = services.getString();
+			if (strcasecmp(service_id, service_uuid) == 0) {
+				return true;
+			}
+			services.next();
+		}
+		return false;
+	}
+
+	void onDeviceDiscovered(const char* bt_address, dbus::BaseMessageIterator* property_iterator) {
+		dbus::DictionaryHelper properties(property_iterator);
+		const char* name = properties.getString("Name");
+		bool paired = properties.getBool("Paired");
+		//bool trusted = properties.getBool("Trusted");
+		auto services = properties.getArray("UUIDs");
+		LOG(INFO) << "Discovered " << bt_address << " " << name;
+		if (!paired && supports(services, dbus::UIID_AUDIOSOURCE)) {
+			LOG(INFO) << "Try to pair with " << name;
+		}
+	}
+
 	void loop() {
 		dbus::ObjectPath adapter_path;
 		if (!getAdapterPath("", &adapter_path)) {
@@ -152,8 +181,11 @@ public:
 		}
 
 		adapter_ = new dbus::BluezAdapter(&conn_, adapter_path);
+		conn_.addObject(adapter_);
 		adapter_media_interface_ = new dbus::BluezMedia(&conn_, adapter_path);
 
+		adapter_->setDeviceFoundCallback(googleapis::NewPermanentCallback(
+				this, &Application::onDeviceDiscovered));
 		adapter_->setName("A2DP Raspi Sync");
 		adapter_->setDiscoverableTimeout(5*60); // 5 minutes;
 		adapter_->setPairableTimeout(5*60);
@@ -182,11 +214,10 @@ public:
 				initiateConnection();
 				last_connect_time = timeGetTime();
 			}
-			conn_.process(200);
+			conn_.process(100); // 100ms timeout
 		} while (true);
 		adapter_media_interface_->unregisterEndpoint(*media_endpoint_);
 		delete adapter_media_interface_;
-		delete adapter_;
 	}
 private:
 	static const uint32_t RECONNECT_TIME = 30000;

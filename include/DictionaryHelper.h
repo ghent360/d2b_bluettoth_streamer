@@ -34,6 +34,11 @@ public:
 		return value.getString();
 	}
 
+	bool getBool(const char* name) {
+		BaseMessageIterator value = dict_[name];
+		return value.getBool();
+	}
+
 	BaseMessageIterator getArray(const char* name) {
 		BaseMessageIterator value = dict_[name];
 		int type = value.getArgumentType();
@@ -44,6 +49,12 @@ public:
 		return value;
 	}
 
+	void dump(const char* prefix) {
+		for(auto& value : dict_) {
+			LOG(INFO) << prefix << " " << value.first << " type:"
+					<< value.second.getArgumentType();
+		}
+	}
 private:
 	void parse(BaseMessageIterator* dict) {
 		if (DBUS_TYPE_ARRAY == dict->getArgumentType()) {
