@@ -180,11 +180,9 @@ public:
 	}
 
 	void onStateChange(dbus::AudioSource::State value,
-			const dbus::AudioSource* ctx) {
-		const MyAudioSource* audio_src = reinterpret_cast<const MyAudioSource*>(ctx);
+			dbus::AudioSource* ctx) {
+		MyAudioSource* audio_src = reinterpret_cast<MyAudioSource*>(ctx);
 		dbus::AudioSource::State prev_state = audio_src->getState();
-		LOG(INFO) << "onStateChange " << audio_src->getPathToSelf()
-				<< " " << value;
 	    switch (value) {
 	    case dbus::AudioSource::State::PLAYING:
 	    	if (media_endpoint_->isTransportConfigValid()) {
@@ -193,6 +191,8 @@ public:
 	    	break;
 
 	    case dbus::AudioSource::State::CONNECTED:
+			LOG(INFO) << "Connected to " << audio_src->getPathToSelf();
+	    	// If this device was in playing state, stop the playback, otherwise ignore.
 	    	if (prev_state == dbus::AudioSource::State::PLAYING) {
 	    		stopPlayback();
 	    	}
@@ -200,23 +200,35 @@ public:
 	    	break;
 
 	    case dbus::AudioSource::State::DISCONNECTED:
+	    	// If this device was in playing state, stop the playback, otherwise ignore.
 	    	if (prev_state == dbus::AudioSource::State::PLAYING) {
 	    		stopPlayback();
 	    	}
 	    	break;
 
 	    case dbus::AudioSource::State::CONNECTING:
+	    	// We want to differentiate between connect attempts we initiated and
+	    	// connections originating from the device, which are user initiated.
 	    	if (elapsedTime(audio_src->getLastConenctTime()) > CONNECT_TIMEOUT) {
 	    		LOG(INFO) << "Device initiated connect.";
-    			MyAudioSource* current = sourceConnected();
+
+    			// Update the last_connect_time_ timer, so we don't initiate group reconnects.
 				last_connect_time_ = timeGetTime();
+
+	    		// Get the device we are currently connected to.
+    			MyAudioSource* current = sourceConnected();
     			if (NULL != current) {
     				dbus::AudioSource::State current_state = current->getState();
     				uint32_t time_since_last_play = elapsedTime(current->getLastPlayTime());
     				if (current_state != dbus::AudioSource::State::PLAYING &&
     					time_since_last_play > PLAY_TIMEOUT) {
+    					// If the device is not currently playing and it's been on pause for a while,
+    					// it's probably ok to disconnect it.
     					LOG(INFO) << "Disconnecting " << current->getPathToSelf();
     					current->disconnectAsync();
+
+    					// And try to connect to the device that was initiating a connection with us.
+    					audio_src->connectAsync();
     				}
 	    		}
 	    	}

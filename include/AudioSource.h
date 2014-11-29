@@ -33,7 +33,7 @@ public:
 		PLAYING = 4
 	};
 
-	typedef googleapis::Callback2<State, const AudioSource*> OnStateChangeCallback;
+	typedef googleapis::Callback2<State, AudioSource*> OnStateChangeCallback;
 
 	AudioSource(Connection* connection, const ObjectPath& path);
 	virtual ~AudioSource();
