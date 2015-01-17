@@ -54,12 +54,7 @@ public:
 		return value;
 	}
 
-	void dump(const char* prefix) {
-		for(auto& value : dict_) {
-			LOG(INFO) << prefix << " " << value.first << " type:"
-					<< value.second.getArgumentType();
-		}
-	}
+	void dump(const char* prefix);
 private:
 	void parse(BaseMessageIterator* dict) {
 		if (DBUS_TYPE_ARRAY == dict->getArgumentType()) {

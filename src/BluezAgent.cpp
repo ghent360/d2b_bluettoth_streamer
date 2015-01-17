@@ -194,6 +194,7 @@ SimpleBluezAgent::SimpleBluezAgent(Connection* conn, uint32_t pin_code)
 
 const char* SimpleBluezAgent::requestPinCode(const ObjectPath&) {
     snprintf(buffer_, sizeof(buffer_), "%d", pin_code_);
+    LOG(INFO) << "requestPinCode: " << buffer_;
     return buffer_;
 }
 

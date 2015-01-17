@@ -156,6 +156,7 @@ void BluezAdapter::refreshProperties() {
 		if (iter.hasArgs()) {
 			DictionaryHelper dict(&iter);
 
+			//dict.dump("Adapter properties:");
 			devices_.clear();
 			auto devices_iter = dict.getArray(DEVICES_PROPERTY).recurse();
 			while (DBUS_TYPE_OBJECT_PATH == devices_iter.getArgumentType()) {

@@ -14,6 +14,7 @@ bt_a2dp_SOURCES =               \
     MediaTransport.cpp	        \
     RemoteMethod.cpp            \
     BluezMedia.cpp	            \
+    DictionaryHelper.cpp        \
     MediaTransportProperties.cpp \
     SbcDecodeThread.cpp         \
     BluezNames.cpp	            \
@@ -34,4 +35,5 @@ bt_a2dp_CXXFLAGS = --std=c++11
 
 bt_a2dp_LDADD =  $(libglog_LIBS) $(dbus_LIBS) \
     $(top_builddir)/sbc/libsbc.la \
+    $(top_builddir)/googleapis/base/libgoogleapis.a \
     -lgflags -lasound -lpthread

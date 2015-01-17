@@ -70,6 +70,7 @@ AC_CONFIG_FILES([
  Makefile
  src/Makefile
  sbc/Makefile
+ googleapis/base/Makefile
 ])
 AC_OUTPUT
 

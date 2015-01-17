@@ -96,7 +96,7 @@ public:
 	SimpleBluezAgent(Connection* conn, uint32_t pin_code);
 
 	virtual const char* getCapabilities() {
-		return "DisplayOnly";
+		return "KeyboardDisplay";
 	}
 protected:
 	virtual void release() {}

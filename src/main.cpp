@@ -39,7 +39,8 @@ public:
 
 	void connectAsync() {
 		last_connect_time_ = timeGetTime();
-		dbus::AudioSource::connectAsync(-1, NULL);
+		dbus::AudioSource::connectAsync(-1, googleapis::NewCallback(this,
+				&MyAudioSource::onConnectResult));
 	}
 
 	void disconnectAsync() {
@@ -61,6 +62,11 @@ protected:
 		}
 		dbus::AudioSource::onStateChanged(new_state);
 	}
+
+	void onConnectResult(dbus::Message* msg) {
+		msg->dump("onConnectResult: ");
+	}
+
 private:
 	uint32_t last_connect_time_;
 	uint32_t last_play_time_;
@@ -138,10 +144,8 @@ public:
 	}
 
 	void startDiscovery() {
-		LOG(INFO) << "Start discovery.";
-		if (!adapter_->getDiscovering()) {
-			adapter_->startDiscovery();
-		}
+		LOG(INFO) << "Start discoverable.";
+		adapter_->refreshProperties();
 		if (!adapter_->getDiscoverable()) {
 			adapter_->setDiscoverable(true);
 		}
@@ -151,11 +155,8 @@ public:
 	}
 
 	void stopDiscovery() {
-		LOG(INFO) << "Stop discovery.";
+		LOG(INFO) << "Stop discoverable.";
 		adapter_->refreshProperties();
-		if (adapter_->getDiscovering()) {
-			adapter_->stopDiscovery();
-		}
 		if (adapter_->getDiscoverable()) {
 			adapter_->setDiscoverable(false);
 		}
@@ -283,9 +284,9 @@ public:
 		adapter_->setDeviceCreatedCallback(googleapis::NewPermanentCallback(
 				this, &Application::onDeviceCreated));
 
-		adapter_->setName("Raspberry Sync");
-		adapter_->setDiscoverableTimeout(5*60); // 5 minutes;
-		adapter_->setPairableTimeout(5*60);
+		adapter_->setName("BT Sync");
+		adapter_->setDiscoverableTimeout(1*60); // 1 minute;
+		adapter_->setPairableTimeout(1*60);
 
 		media_endpoint_ = new dbus::SbcMediaEndpoint();
 		//media_endpoint_ = new dbus::AacMediaEndpoint();
@@ -311,7 +312,7 @@ public:
 				LOG(INFO) << "Nothing connected for a while. Retry.";
 				initiateConnection();
 				last_connect_time_ = timeGetTime();
-				startDiscovery();
+				//startDiscovery();
 			}
 			conn_.process(100); // 100ms timeout
 		} while (true);
@@ -319,7 +320,7 @@ public:
 		delete adapter_media_interface_;
 	}
 private:
-	static const uint32_t RECONNECT_TIME = 15000;
+	static const uint32_t RECONNECT_TIME = 25000;
 	static const uint32_t CONNECT_TIMEOUT = 10000;
 	static const uint32_t PLAY_TIMEOUT = 15000;
 
