@@ -15,7 +15,7 @@ void DictionaryHelper::dump(const char* prefix) {
 	for(auto& value : dict_) {
 		switch (value.second.getArgumentType()) {
 		case DBUS_TYPE_BYTE:
-			LOG(INFO) << prefix << " " << value.first << " " << value.second.getByte();
+			LOG(INFO) << prefix << " " << value.first << " " << (int)value.second.getByte();
 			break;
 		case DBUS_TYPE_BOOLEAN:
 			LOG(INFO) << prefix << " " << value.first << " " << value.second.getBool();

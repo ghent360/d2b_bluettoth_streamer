@@ -74,6 +74,11 @@ const MethodDescriptor* InterfaceImplementation::findMethod(const StringWithHash
 			return &d;
 		}
 	}
+	LOG(ERROR) << "Unable to find method: " << name;
+	LOG(ERROR) << "Available methods:";
+	for (const MethodDescriptor& d : list) {
+		LOG(ERROR) << "    " << d.method_name_;
+	}
 	return NULL;
 }
 

@@ -172,6 +172,7 @@ void Connection::process(int time_out) {
 		Message reply;
 		bool handled = false;
 		int type = msg.getType();
+		//msg.dump("Incomming:");
 		if (type == DBUS_MESSAGE_TYPE_METHOD_CALL ||
 			type == DBUS_MESSAGE_TYPE_SIGNAL) {
 			ObjectPath path = msg.getPath();

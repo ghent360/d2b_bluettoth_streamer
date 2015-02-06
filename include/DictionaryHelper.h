@@ -44,6 +44,11 @@ public:
 		return value.getUint32();
 	}
 
+	uint8_t getByte(const char* name) {
+		BaseMessageIterator value = dict_[name];
+		return value.getByte();
+	}
+
 	BaseMessageIterator getArray(const char* name) {
 		BaseMessageIterator value = dict_[name];
 		int type = value.getArgumentType();

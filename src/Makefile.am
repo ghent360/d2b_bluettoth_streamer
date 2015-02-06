@@ -4,7 +4,8 @@ bt_a2dp_SOURCES =               \
     InterfaceImplementation.cpp \
     MpegMediaEndpoint.cpp       \
     AudioSource.cpp             \
-    main.cpp		            \
+    AudioTargetControl.cpp      \
+    main.cpp		        \
     ObjectBase.cpp              \
     BluezAdapter.cpp            \
     BluezAgent.cpp              \
@@ -13,15 +14,15 @@ bt_a2dp_SOURCES =               \
     BluezManager.cpp            \
     MediaTransport.cpp	        \
     RemoteMethod.cpp            \
-    BluezMedia.cpp	            \
+    BluezMedia.cpp	        \
     DictionaryHelper.cpp        \
     MediaTransportProperties.cpp \
     SbcDecodeThread.cpp         \
-    BluezNames.cpp	            \
+    BluezNames.cpp	        \
     MessageArgumentIterator.cpp \
     SbcMediaEndpoint.cpp        \
-    Connection.cpp	            \
-    Message.cpp		            \
+    Connection.cpp	        \
+    Message.cpp		        \
     time_util.cpp
 
 bt_a2dp_CPPFLAGS = \

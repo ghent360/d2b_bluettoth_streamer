@@ -55,10 +55,10 @@ protected:
 	virtual void onStateChanged(State new_state);
 
 	State state_;
+	Connection* connection_;
 private:
 	static void handle_stateChanged(const char* new_state, ObjectBase* ctx);
 
-	Connection* connection_;
 	OnStateChangeCallback* on_state_change_cb_;
 
 	// DBus metadata
