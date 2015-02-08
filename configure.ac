@@ -24,7 +24,7 @@ AC_CHECK_LIB([asound], [snd_pcm_close])
 AC_CHECK_LIB([pthread], [pthread_create])
 
 # Checks for header files.
-AC_CHECK_HEADERS([float.h limits.h malloc.h stddef.h stdint.h stdlib.h string.h sys/time.h unistd.h])
+AC_CHECK_HEADERS([float.h limits.h malloc.h stddef.h stdint.h stdlib.h string.h sys/time.h unistd.h fcntl.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL
@@ -46,7 +46,7 @@ AC_CHECK_TYPES([ptrdiff_t])
 # Checks for library functions.
 AC_FUNC_MALLOC
 AC_FUNC_STRNLEN
-AC_CHECK_FUNCS([bzero clock_gettime gethostbyname getpagesize gettimeofday memchr memset select strtol strtoul strtoull])
+AC_CHECK_FUNCS([bzero clock_gettime gethostbyname getpagesize gettimeofday memchr memset select strtol strtoul strtoull strcasecmp])
 
 PKG_PROG_PKG_CONFIG
 

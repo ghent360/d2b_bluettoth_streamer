@@ -56,7 +56,7 @@ void CommandParser::sendStatus(const char* status) {
 	if (!isOpen()) {
 		if (!open()) return;
 	}
-	write(file_handle_, status, strlen(status));
+	int written = write(file_handle_, status, strlen(status));
 }
 
 void CommandParser::process() {
