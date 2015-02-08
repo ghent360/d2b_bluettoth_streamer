@@ -23,6 +23,7 @@ bt_a2dp_SOURCES =               \
     SbcMediaEndpoint.cpp        \
     Connection.cpp	        \
     Message.cpp		        \
+    CommandParser.cpp       \
     time_util.cpp
 
 bt_a2dp_CPPFLAGS = \

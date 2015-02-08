@@ -18,6 +18,7 @@
 #include "BluezMedia.h"
 #include "BluezNames.h"
 #include "Connection.h"
+#include "CommandParser.h"
 #include "DictionaryHelper.h"
 #include "ObjectPath.h"
 #include "SbcDecodeThread.h"
@@ -30,6 +31,8 @@
 #include <stdint.h>
 
 DEFINE_bool(autoconnect, true, "Connect to known devices automatically.");
+DEFINE_string(command_file, "/dev/ttyAMA0",
+		"File or FIFO where to read commands and write status to.");
 
 class MyAudioSource : public dbus::AudioSource {
 public:
@@ -98,6 +101,13 @@ private:
 	dbus::AudioTargetControl* tgt_ctl_;
 };
 
+const static dbus::StringWithHash CMD_PLAY("PLAY");
+const static dbus::StringWithHash CMD_PAUS("PAUS");
+const static dbus::StringWithHash CMD_STOP("STOP");
+const static dbus::StringWithHash CMD_CONT("CONT");
+const static dbus::StringWithHash CMD_NTRK("NTRK");
+const static dbus::StringWithHash CMD_PTRK("PTRK");
+
 class Application {
 public:
 	Application()
@@ -108,14 +118,11 @@ public:
 		  playback_thread_(NULL),
 		  last_connect_time_(0),
 		  last_discovery_time_(0),
-		  last_stuff_time_(0) {
+		  command_parser_(FLAGS_command_file) {
 	}
 
 	virtual ~Application() {
-	    if (playback_thread_) {
-	    	playback_thread_->stop();
-	    	delete playback_thread_;
-	    }
+		stopPlayback();
 	}
 
 	int connectBus() {
@@ -166,7 +173,7 @@ public:
 	MyAudioSource* createAudioSource(dbus::ObjectPath device_path) {
 		MyAudioSource* audio_src = new MyAudioSource(&conn_, device_path);
 		audio_src->setOnStateChangeCallback(googleapis::NewPermanentCallback(this,
-				&Application::onStateChange));
+				&Application::onAudioStateChange));
 		audio_sources_.push_back(audio_src);
 		conn_.addObject(audio_src);
 
@@ -183,12 +190,13 @@ public:
 			}
 			if (FLAGS_autoconnect) {
 				audio_src->connectAsync();
+				last_connect_time_ = timeGetTime();
 			}
 		}
 	}
 
-	void startDiscovery() {
-		LOG(INFO) << "Trying to set discoverable.";
+	void startDiscoverable() {
+		last_discovery_time_ = timeGetTime();
 		adapter_->refreshProperties();
 		if (!adapter_->getDiscoverable()) {
 			LOG(INFO) << "Set discoverable.";
@@ -202,7 +210,7 @@ public:
 		}
 	}
 
-	void stopDiscovery() {
+	void stopDiscoverable() {
 		adapter_->refreshProperties();
 		if (adapter_->getDiscoverable()) {
 			LOG(INFO) << "Stop discoverable.";
@@ -218,6 +226,7 @@ public:
 	    	playback_thread_->stop();
 	    	delete playback_thread_;
 	    	playback_thread_ = 0;
+	    	LOG(INFO) << "Stopped playback thread.";
 	    }
 	}
 
@@ -226,13 +235,10 @@ public:
 	    playback_thread_ = new dbus::SbcDecodeThread(&conn_,
 	    		media_endpoint_->getTransportPath());
 	    playback_thread_->start();
+	    LOG(INFO) << "Started playback thread.";
 	}
 
-	void onContrrolStateChange(bool is_connected, dbus::AudioTargetControl* ctx) {
-		LOG(INFO) << "Target control connected: " << is_connected;
-	}
-
-	void onStateChange(dbus::AudioSource::State value,
+	void onAudioStateChange(dbus::AudioSource::State value,
 			dbus::AudioSource* ctx) {
 		MyAudioSource* audio_src = reinterpret_cast<MyAudioSource*>(ctx);
 		dbus::AudioSource::State prev_state = audio_src->getState();
@@ -240,6 +246,7 @@ public:
 	    case dbus::AudioSource::State::PLAYING:
 	    	if (media_endpoint_->isTransportConfigValid()) {
 	    		startPlayback();
+		    	command_parser_.sendStatus("@&PLAY\n");
 	    	}
 	    	break;
 
@@ -249,7 +256,8 @@ public:
 	    	if (prev_state == dbus::AudioSource::State::PLAYING) {
 	    		stopPlayback();
 	    	}
-	    	stopDiscovery();
+	    	stopDiscoverable();
+	    	command_parser_.sendStatus("@&CONN\n");
 	    	break;
 
 	    case dbus::AudioSource::State::DISCONNECTED:
@@ -257,6 +265,7 @@ public:
 	    	if (prev_state == dbus::AudioSource::State::PLAYING) {
 	    		stopPlayback();
 	    	}
+	    	command_parser_.sendStatus("@&DISC\n");
 	    	break;
 
 	    case dbus::AudioSource::State::CONNECTING:
@@ -270,7 +279,8 @@ public:
 
 	    		// Get the device we are currently connected to.
     			MyAudioSource* current = sourceConnected();
-    			if (NULL != current) {
+    			if (NULL != current &&
+    				current->getPathToSelf() != ctx->getPathToSelf()) {
     				dbus::AudioSource::State current_state = current->getState();
     				uint32_t time_since_last_play = elapsedTime(current->getLastPlayTime());
     				if (current_state != dbus::AudioSource::State::PLAYING &&
@@ -313,6 +323,34 @@ public:
 		}
 	}
 
+	void onCommand(const char* command) {
+		LOG(INFO) << "Got command: " << command;
+		MyAudioSource* connected_source = sourceConnected();
+		if (connected_source) {
+			dbus::StringWithHash cmd(command);
+			auto* control = connected_source->getTargetControl();
+			control->refreshProperties();
+			control->updatePlayStatus();
+			if (cmd == CMD_PLAY || cmd == CMD_CONT) {
+				if (control->getStatus() != dbus::AudioTargetControl::STATUS_PLAYING) {
+					control->sendButton(dbus::AudioTargetControl::BUTTON_ID_PLAY);
+				}
+			} else if (cmd == CMD_PAUS || cmd == CMD_STOP) {
+				if (control->getStatus() == dbus::AudioTargetControl::STATUS_PLAYING) {
+					control->sendButton(dbus::AudioTargetControl::BUTTON_ID_PAUSE);
+				}
+			} else if (cmd == CMD_NTRK) {
+				if (control->getStatus() == dbus::AudioTargetControl::STATUS_PLAYING) {
+					control->sendButton(dbus::AudioTargetControl::BUTTON_ID_NEXT);
+				}
+			} else if (cmd == CMD_PTRK) {
+				if (control->getStatus() == dbus::AudioTargetControl::STATUS_PLAYING) {
+					control->sendButton(dbus::AudioTargetControl::BUTTON_ID_PREV);
+				}
+			}
+		}
+	}
+
 	void loop() {
 		dbus::ObjectPath adapter_path;
 		if (!getAdapterPath("", &adapter_path)) {
@@ -331,8 +369,7 @@ public:
 
 		adapter_->setDeviceCreatedCallback(googleapis::NewPermanentCallback(
 				this, &Application::onDeviceCreated));
-
-		adapter_->setName("BT Sync");
+		adapter_->setName("iQurius JSync");
 
 		media_endpoint_ = new dbus::SbcMediaEndpoint();
 		//media_endpoint_ = new dbus::AacMediaEndpoint();
@@ -346,50 +383,41 @@ public:
 		}
 		conn_.addObject(media_endpoint_);
 
+		command_parser_.setCommandCllaback(
+				googleapis::NewPermanentCallback(this, &Application::onCommand));
+
 		initiateConnection();
-		last_connect_time_ = timeGetTime();
 		if (audio_sources_.empty()) {
-			startDiscovery();
+			startDiscoverable();
 		}
-		last_stuff_time_ = timeGetTime();
-		last_discovery_time_ = timeGetTime();
+		uint32_t start_time = timeGetTime();
 		do
 		{
 			MyAudioSource* connected_source = sourceConnected();
 			if (NULL == connected_source &&
+				FLAGS_autoconnect &&
+				elapsedTime(start_time) < TRY_CONNECT_TIME &&
 				elapsedTime(last_connect_time_) > RECONNECT_TIME) {
 				LOG(INFO) << "Nothing connected for a while. Retry.";
 				initiateConnection();
-				last_connect_time_ = timeGetTime();
-
 			}
-			if (NULL == connected_source && !isSourceConnecting() &&
-					elapsedTime(last_discovery_time_) > 5000) {
-				startDiscovery();
-				last_discovery_time_ = timeGetTime();
+			if (NULL == connected_source &&
+				!isSourceConnecting() &&
+				elapsedTime(last_discovery_time_) > DISCOVERY_FLAG_RETRY_TIMEOUT) {
+				startDiscoverable();
 			}
-			if (elapsedTime(last_stuff_time_) > 20000) {
-				if (NULL != connected_source) {
-					auto* tgt_ctl = connected_source->getTargetControl();
-					tgt_ctl->refreshProperties();
-					if (tgt_ctl->getConnected()) {
-						//tgt_ctl_->sendButton(dbus::AudioTargetControl::EButtonID::BUTTON_ID_PLAY);
-						tgt_ctl->updatePlayStatus();
-					} else {
-						LOG(INFO) << "Control not connected mischief deferred.";
-					}
-				}
-				last_stuff_time_ = timeGetTime();
-			}
+			command_parser_.process();
 			conn_.process(100); // 100ms timeout
 		} while (true);
 		adapter_media_interface_->unregisterEndpoint(*media_endpoint_);
 		delete adapter_media_interface_;
 	}
 private:
-	static const uint32_t RECONNECT_TIME = 25000;
+	static const uint32_t TRY_CONNECT_TIME = 90000;
+	static const uint32_t RECONNECT_TIME = 20000;
 	static const uint32_t CONNECT_TIMEOUT = 10000;
 	static const uint32_t PLAY_TIMEOUT = 15000;
+	static const uint32_t DISCOVERY_FLAG_RETRY_TIMEOUT = 5000;
 
 	dbus::Connection conn_;
 	dbus::BluezAdapter* adapter_;
@@ -399,8 +427,8 @@ private:
 	dbus::PlaybackThread* playback_thread_;
 	uint32_t last_connect_time_;
 	uint32_t last_discovery_time_;
-	uint32_t last_stuff_time_;
 	std::list<MyAudioSource*> audio_sources_;
+	CommandParser command_parser_;
 };
 
 int main(int argc, char *argv[]) {

@@ -113,6 +113,7 @@ protected:
 private:
 	uint32_t pin_code_;
 	char buffer_[10];
+	DISALLOW_COPY_AND_ASSIGN(SimpleBluezAgent);
 };
 
 } /* namespace dbus */
