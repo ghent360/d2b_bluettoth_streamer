@@ -68,9 +68,9 @@ AC_SUBST(libglog_LIBS)
 
 AC_CONFIG_FILES([
  Makefile
- src/Makefile
- sbc/Makefile
  googleapis/base/Makefile
+ sbc/Makefile
+ src/Makefile
 ])
 AC_OUTPUT
 

@@ -37,5 +37,5 @@ bt_a2dp_CXXFLAGS = --std=c++11
 
 bt_a2dp_LDADD =  $(libglog_LIBS) $(dbus_LIBS) \
     $(top_builddir)/sbc/libsbc.la \
-    $(top_builddir)/googleapis/base/libgoogleapis.a \
+    $(top_builddir)/googleapis/base/libgoogleapis.la \
     -lgflags -lasound -lpthread
