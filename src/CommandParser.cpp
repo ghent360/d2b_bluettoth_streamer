@@ -57,6 +57,10 @@ void CommandParser::sendStatus(const char* status) {
 		if (!open()) return;
 	}
 	int written = write(file_handle_, status, strlen(status));
+	if (written < 0) {
+		LOG(WARNING) << "Error writing command status " << status
+				<< " errno=" << errno;
+	}
 }
 
 void CommandParser::process() {

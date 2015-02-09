@@ -397,6 +397,7 @@ public:
 			if (NULL == connected_source &&
 				FLAGS_autoconnect &&
 				elapsedTime(start_time) < TRY_CONNECT_TIME &&
+				!audio_sources_.empty() &&
 				elapsedTime(last_connect_time_) > RECONNECT_TIME) {
 				LOG(INFO) << "Nothing connected for a while. Retry.";
 				initiateConnection();
