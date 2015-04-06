@@ -20,6 +20,7 @@
 #include "Connection.h"
 #include "CommandParser.h"
 #include "DictionaryHelper.h"
+#include "FirmwareUpdater.h"
 #include "ObjectPath.h"
 #include "SbcDecodeThread.h"
 #include "SbcMediaEndpoint.h"
@@ -438,10 +439,12 @@ int main(int argc, char *argv[]) {
 	google::InitGoogleLogging(argv[0]);
 	LOG(INFO) << "Starting audio daemon";
 	dbus_threads_init_default();
+	iqurius::FirmwareUpdater fwu;
+	fwu.checksumFile("/home/vne/raspi/OpenELEC.tv/target/"
+			"OpenBT-RPi.arm-devel-20150405165845-r20632-g0cc25f6.system", "");
 	Application app;
 	app.connectBus();
 	app.loop();
 	LOG(INFO) << "Exiting audio daemon";
 	return 0;
 }
-

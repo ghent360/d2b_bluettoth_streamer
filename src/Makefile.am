@@ -17,6 +17,10 @@ bt_a2dp_SOURCES =               \
     ../include/BluezAdapter.h          \
     BluezAgent.cpp              \
     ../include/BluezAgent.h            \
+    sha256.cpp              \
+    ../include/sha256.h            \
+    FirmwareUpdater.cpp              \
+    ../include/FirmwareUpdater.h            \
     MediaEndpoint.cpp	        \
     ../include/MediaEndpoint.h         \
     PlaybackThread.cpp          \
