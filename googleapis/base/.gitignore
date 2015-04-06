@@ -1,5 +1,7 @@
 Makefile.in
 *.o
-lib*.a
+libgoogleapis.la
+libgoogleapis.a
+libgoogleapis_la*
 .deps/
 .libs/
