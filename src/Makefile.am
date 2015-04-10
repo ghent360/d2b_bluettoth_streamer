@@ -17,10 +17,10 @@ bt_a2dp_SOURCES =               \
     ../include/BluezAdapter.h          \
     BluezAgent.cpp              \
     ../include/BluezAgent.h            \
-    sha256.cpp              \
-    ../include/sha256.h            \
     FirmwareUpdater.cpp              \
     ../include/FirmwareUpdater.h            \
+    FirmwareContainer.cpp              \
+    ../include/FirmwareContainer.h            \
     MediaEndpoint.cpp	        \
     ../include/MediaEndpoint.h         \
     PlaybackThread.cpp          \
@@ -71,4 +71,4 @@ bt_a2dp_CXXFLAGS = --std=c++11
 bt_a2dp_LDADD =  $(libglog_LIBS) $(dbus_LIBS) \
     $(top_builddir)/sbc/libsbc.la \
     $(top_builddir)/googleapis/base/libgoogleapis.la \
-    -lgflags -lasound -lpthread
+    -lgflags -lasound -lpthread -lgcrypt -llzo2

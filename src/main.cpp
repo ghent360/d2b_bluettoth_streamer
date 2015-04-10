@@ -20,7 +20,7 @@
 #include "Connection.h"
 #include "CommandParser.h"
 #include "DictionaryHelper.h"
-#include "FirmwareUpdater.h"
+#include "FirmwareContainer.h"
 #include "ObjectPath.h"
 #include "SbcDecodeThread.h"
 #include "SbcMediaEndpoint.h"
@@ -29,6 +29,8 @@
 #include <dbus/dbus.h>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+#include <lzo/lzoconf.h>
+#include <lzo/lzo1x.h>
 #include <stdint.h>
 
 DEFINE_bool(autoconnect, true, "Connect to known devices automatically.");
@@ -439,9 +441,17 @@ int main(int argc, char *argv[]) {
 	google::InitGoogleLogging(argv[0]);
 	LOG(INFO) << "Starting audio daemon";
 	dbus_threads_init_default();
-	iqurius::FirmwareUpdater fwu;
-	fwu.checksumFile("/home/vne/raspi/OpenELEC.tv/target/"
-			"OpenBT-RPi.arm-devel-20150405165845-r20632-g0cc25f6.system", "");
+	if (lzo_init() != LZO_E_OK) {
+		LOG(ERROR) << "Error initializing the LZO library";
+		return 1;
+	}
+	iqurius::FirmwareContainerWriter fcw("6.0-dev");
+	fcw.addFile("/home/vne/raspi/OpenELEC.tv/target/OpenBT-RPi.arm-6.0-dev.system", "SYSTEM");
+	fcw.addFile("/home/vne/raspi/OpenELEC.tv/target/OpenBT-RPi.arm-6.0-dev.kernel", "kernel.img");
+	fcw.writeContainer("/tmp/obt.fwu");
+	iqurius::FirmwareContainerReader fcr("/tmp/obt.fwu");
+	fcr.loadManifest();
+	fcr.verifyFiles();
 	Application app;
 	app.connectBus();
 	app.loop();
