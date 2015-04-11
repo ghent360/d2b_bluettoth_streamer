@@ -356,7 +356,10 @@ static bool freadUint32(uint32_t* value, FILE* input) {
     	LOG(ERROR) << "Error reading from the input file";
     	return false;
     }
-    *value = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
+    *value = buffer[0] |
+    		(buffer[1] << 8) |
+			(buffer[2] << 16) |
+			(buffer[3] << 24);
     return true;
 }
 
@@ -526,6 +529,10 @@ bool FirmwareContainerReader::verifyFiles() {
 	int rc;
 	bool result = false;
 
+	if (manifest_.size() == 0) {
+		LOG(ERROR) << "Please call loadManifest first";
+		goto exit;
+	}
 	input = fopen(container_path_.c_str(), "rb");
 	if (NULL == input) {
 		LOG(ERROR) << "Unable to open container " << container_path_;
@@ -560,7 +567,8 @@ bool FirmwareContainerReader::verifyFiles() {
 		}
 		error = gcry_md_open(&hd, g_HashAlgo, 0);
 		if (error != 0) {
-			LOG(ERROR) << "Can not initialize the gcrypt hash library: " << error;
+			LOG(ERROR) << "Can not initialize the gcrypt hash library: "
+					<< error;
 			goto exit;
 		}
 		do {
@@ -605,6 +613,250 @@ exit:
 	if (hd) gcry_md_close(hd);
     if (input) fclose(input);
 	return result;
+}
+
+bool FirmwareContainerReader::performUpdate(const char* flash_path,
+		const char* storage_path) {
+	FILE* input = NULL;
+	FILE* output = NULL;
+	uint32_t input_len;
+	uint32_t compressed_len;
+	uint8_t* compressed_buffer = NULL;
+	uint8_t* output_buffer = NULL;
+	size_t read_len;
+	size_t output_len;
+	int rc;
+	bool result = false;
+    struct stat stat_buf;
+
+	if (manifest_.size() == 0) {
+		LOG(ERROR) << "Please call loadManifest first";
+		goto exit;
+	}
+	input = fopen(container_path_.c_str(), "rb");
+	if (NULL == input) {
+		LOG(ERROR) << "Unable to open container " << container_path_;
+		goto exit;
+	}
+	if (0 != fseek(input, MAX_DIGEST_SIZE + 8, SEEK_SET)) {
+		LOG(ERROR) << "Can't seek in the container errno=" << errno;
+		goto exit;
+	}
+	if (!freadUint32(&compressed_len, input)) {
+		goto exit;
+	}
+	if (0 != fseek(input, compressed_len, SEEK_CUR)) {
+		LOG(ERROR) << "Can't seek in the container errno=" << errno;
+		goto exit;
+	}
+
+	output_buffer = new uint8_t[g_BlockSize];
+	if (NULL == output_buffer) {
+		LOG(ERROR) << "Out of memory";
+		goto exit;
+	}
+	compressed_buffer = new uint8_t[g_BlockSize];
+	if (NULL == compressed_buffer) {
+		LOG(ERROR) << "Out of memory";
+		goto exit;
+	}
+	for (FileInfo fi : manifest_) {
+		std::string output_file_name;
+		if (fi.to_storage_) {
+			output_file_name = storage_path;
+		} else {
+			output_file_name = flash_path;
+		}
+		output_file_name.append(fi.archive_path_);
+		output_file_name.append(".updated");
+
+		output = fopen(output_file_name.c_str(), "wb");
+		if (NULL == output) {
+			LOG(ERROR) << "Can't open output file: " << output_file_name;
+			goto exit;
+		}
+		do {
+			if (!freadUint32(&input_len, input)) {
+				goto exit;
+			}
+			if (0 == input_len) break;
+			if (!freadUint32(&compressed_len, input)) {
+				goto exit;
+			}
+			read_len = fread(compressed_buffer, 1, compressed_len, input);
+			if (read_len != compressed_len) {
+				LOG(ERROR) << "Error reading input file.";
+				goto exit;
+			}
+			if (compressed_len < input_len) {
+				output_len = g_BlockSize;
+				rc = lzo1x_decompress_safe(compressed_buffer,
+						compressed_len,
+						output_buffer,
+						&output_len,
+						NULL);
+				if (rc != LZO_E_OK || output_len != input_len) {
+					LOG(ERROR) << "Error decompressin ght manifest";
+					goto exit;
+				}
+			} else {
+				memcpy(output_buffer, compressed_buffer, input_len);
+			}
+			output_len = fwrite(output_buffer, 1, input_len, output);
+			if (output_len != input_len) {
+				LOG(ERROR) << "Can't write to output file: "
+						<< output_file_name;
+				goto exit;
+			}
+		} while (true);
+		fclose(output);
+		output = NULL;
+		if (!checksumFile(output_file_name, fi.digest_)) {
+			LOG(ERROR) << "File checksum does not match: " << output_file_name;
+			goto exit;
+		}
+	}
+	// Delete old save files.
+	for (FileInfo fi : manifest_) {
+		std::string saved_file_name;
+		if (fi.to_storage_) {
+			saved_file_name = storage_path;
+		} else {
+			saved_file_name = flash_path;
+		}
+		saved_file_name.append(fi.archive_path_);
+		saved_file_name.append(".old");
+		if (0 == stat(saved_file_name.c_str(), & stat_buf)) {
+			if (0 != unlink(saved_file_name.c_str())) {
+				LOG(ERROR) << "Can not remove " << saved_file_name;
+				goto exit;
+			}
+			if (0 == stat(saved_file_name.c_str(), & stat_buf)) {
+				LOG(ERROR) << "File refuses to die " << saved_file_name;
+				goto exit;
+			}
+		}
+	}
+	sync();
+	sync();
+	sync();
+	// Rename the updates.
+	for (FileInfo fi : manifest_) {
+		std::string destination_file_name;
+		std::string saved_file_name;
+		std::string updated_file_name;
+		if (fi.to_storage_) {
+			destination_file_name = storage_path;
+		} else {
+			destination_file_name = flash_path;
+		}
+		destination_file_name.append(fi.archive_path_);
+		saved_file_name = destination_file_name;
+		updated_file_name = destination_file_name;
+		saved_file_name.append(".old");
+		updated_file_name.append(".updated");
+
+		if (0 == stat(destination_file_name.c_str(), & stat_buf) &&
+		    0 != rename(destination_file_name.c_str(),
+				saved_file_name.c_str())) {
+			LOG(ERROR) << "Can not rename " << destination_file_name;
+			goto exit;
+		}
+		if (0 != rename(updated_file_name.c_str(),
+				destination_file_name.c_str())) {
+			LOG(ERROR) << "Can not rename " << updated_file_name;
+			goto exit;
+		}
+	}
+	result = true;
+exit:
+	if (output) fclose(output);
+	delete [] compressed_buffer;
+	delete [] output_buffer;
+    if (input) fclose(input);
+    if (!result) {
+    	revertUpdate(flash_path, storage_path);
+    }
+	return result;
+}
+
+bool FirmwareContainerReader::checksumFile(const std::string& file_path,
+		const uint8_t* input_digest) {
+	const unsigned int digest_len = gcry_md_get_algo_dlen(g_HashAlgo);
+	unsigned char buffer[16384];
+	FILE* input = NULL;
+	gcry_md_hd_t hd = NULL;
+	gcry_error_t error;
+	unsigned char *file_digest;
+	int len;
+	bool result = false;
+
+	input = fopen(file_path.c_str(), "rb");
+	if (NULL == input) {
+		LOG(ERROR) << "Can not open the input file: " << file_path;
+		goto exit;
+	}
+
+	error = gcry_md_open(&hd, g_HashAlgo, 0);
+	if (error != 0) {
+		LOG(ERROR) << "Can not initialize the gcrypt hash library: " << error;
+		goto exit;
+	}
+
+	while (true) {
+		len = fread(buffer, 1, sizeof(buffer), input);
+		if (len <= 0) break;
+		gcry_md_write(hd, buffer, len);
+	}
+	file_digest = gcry_md_read(hd, g_HashAlgo);
+	result = (0 == memcmp(input_digest, file_digest, digest_len));
+exit:
+    if (hd) gcry_md_close(hd);
+    if (input) fclose(input);
+	return result;
+}
+
+void FirmwareContainerReader::revertUpdate(const char* flash_path,
+		const char* storage_path) {
+	struct stat stat_buf;
+
+	for (FileInfo fi : manifest_) {
+		std::string destination_file_name;
+		std::string saved_file_name;
+		std::string updated_file_name;
+		if (fi.to_storage_) {
+			destination_file_name = storage_path;
+		} else {
+			destination_file_name = flash_path;
+		}
+		destination_file_name.append(fi.archive_path_);
+		saved_file_name = destination_file_name;
+		updated_file_name = destination_file_name;
+		saved_file_name.append(".old");
+		updated_file_name.append(".updated");
+
+		if (0 == stat(destination_file_name.c_str(), &stat_buf) &&
+		    0 != stat_buf.st_size) {
+			// Original file is there and non zero length
+			unlink(updated_file_name.c_str());  // Try to remove the tmp file.
+			continue;
+		}
+		if (0 == stat(saved_file_name.c_str(), &stat_buf) &&
+		    0 != stat_buf.st_size) {
+			// Original file is MIA but save file exist.
+			if (0 != rename(saved_file_name.c_str(),
+					destination_file_name.c_str())) {
+				LOG(ERROR) << "Unable to restore saved file: " << saved_file_name;
+			}
+			unlink(updated_file_name.c_str());  // Try to remove the tmp file.
+			continue;
+		}
+		// Both the saved tile and original file are MIA.
+		if (0 != rename(updated_file_name.c_str(), destination_file_name.c_str())) {
+			LOG(ERROR) << "Can not remove " << updated_file_name;
+			unlink(updated_file_name.c_str());  // Try to remove the tmp file.
+		}
+	}
 }
 
 } /* namespace iqurius */

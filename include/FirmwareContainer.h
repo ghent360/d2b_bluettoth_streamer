@@ -94,8 +94,11 @@ public:
 
 	bool verifyFiles();
 	bool loadManifest();
+	bool performUpdate(const char* flash_path, const char* storage_path);
 private:
 	bool deserializeManifest(uint8_t* buffer, size_t buffer_len);
+	void revertUpdate(const char* flash_path, const char* storage_path);
+	bool checksumFile(const std::string& file_path, const uint8_t* checksum);
 
 	struct FileInfo {
 		std::string archive_path_;

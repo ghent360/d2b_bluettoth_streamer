@@ -445,13 +445,14 @@ int main(int argc, char *argv[]) {
 		LOG(ERROR) << "Error initializing the LZO library";
 		return 1;
 	}
-	iqurius::FirmwareContainerWriter fcw("6.0-dev");
-	fcw.addFile("/home/vne/raspi/OpenELEC.tv/target/OpenBT-RPi.arm-6.0-dev.system", "SYSTEM");
-	fcw.addFile("/home/vne/raspi/OpenELEC.tv/target/OpenBT-RPi.arm-6.0-dev.kernel", "kernel.img");
-	fcw.writeContainer("/tmp/obt.fwu");
+	//iqurius::FirmwareContainerWriter fcw("6.0-dev");
+	//fcw.addFile("/home/vne/raspi/OpenELEC.tv/target/OpenBT-RPi.arm-6.0-dev.system", "SYSTEM");
+	//fcw.addFile("/home/vne/raspi/OpenELEC.tv/target/OpenBT-RPi.arm-6.0-dev.kernel", "kernel.img");
+	//fcw.writeContainer("/tmp/obt.fwu");
 	iqurius::FirmwareContainerReader fcr("/tmp/obt.fwu");
 	fcr.loadManifest();
 	fcr.verifyFiles();
+	fcr.performUpdate("/tmp/flash/", "/tmp/storage/");
 	Application app;
 	app.connectBus();
 	app.loop();
