@@ -13,17 +13,19 @@
 
 #include "util.h"
 
+#include <string>
+
 namespace iqurius {
 
 class FirmwareUpdater {
 public:
 	FirmwareUpdater() {}
 	bool checkUpdateAvailable();
-	bool virifyUpdateChecksum();
+private:
 	bool remountFlash(bool read_only);
 	void sync();
-	bool checksumFile(const char* file_path, const char* checksum);
-private:
+
+	std::string update_file_name_;
 	DISALLOW_COPY_AND_ASSIGN(FirmwareUpdater);
 };
 

@@ -33,12 +33,12 @@ static void writeUint64(uint64_t value, uint8_t* buffer) {
 	buffer[7] = (value >> 56) & 0xff;
 }
 
-static void writeUint32(uint32_t value, uint8_t* buffer) {
+/*static void writeUint32(uint32_t value, uint8_t* buffer) {
 	buffer[0] = value & 0xff;
 	buffer[1] = (value >> 8) & 0xff;
 	buffer[2] = (value >> 16) & 0xff;
 	buffer[3] = (value >> 24) & 0xff;
-}
+}*/
 
 static void writeUint16(uint16_t value, uint8_t* buffer) {
 	buffer[0] = value & 0xff;
@@ -247,10 +247,13 @@ bool FirmwareContainerWriter::writeContainer(const char* path) {
 		goto exit;
 	}
 	if (output_buffer_len < input_buffer_len) {
-	    if (!fwriteUint32(output_buffer_len, output)) {
+	    if (!fwriteUint32((uint32_t)output_buffer_len, output)) {
 			goto exit;
 		}
-		write_len = fwrite(compression_buffer, 1, output_buffer_len, output);
+		write_len = fwrite(compression_buffer,
+				1,
+				(size_t)output_buffer_len,
+				output);
 		if (write_len != output_buffer_len) {
 			LOG(ERROR) << "Error writing to the output file";
 			goto exit;
@@ -319,10 +322,10 @@ bool FirmwareContainerWriter::compressFile(const FileInfo& file_info,
 			goto exit;
 	    }
 		if (output_len < len) {
-			if (!fwriteUint32(output_len, output)) {
+			if (!fwriteUint32((uint32_t)output_len, output)) {
 				goto exit;
 			}
-			write_len = fwrite(output_buffer, 1, output_len, output);
+			write_len = fwrite(output_buffer, 1, (size_t)output_len, output);
 			if (write_len != output_len) {
 				LOG(ERROR) << "Error writing to the output file";
 				goto exit;
@@ -458,12 +461,12 @@ static void readUint64(uint64_t* value, uint8_t* buffer) {
 			((uint64_t)buffer[7] << 56);
 }
 
-static void readUint32(uint32_t* value, uint8_t* buffer) {
+/*static void readUint32(uint32_t* value, uint8_t* buffer) {
 	*value = buffer[0] |
 			((uint64_t)buffer[1] << 8) |
 			((uint64_t)buffer[2] << 16) |
 			((uint64_t)buffer[3] << 24);
-}
+}*/
 
 static void readUint16(uint16_t* value, uint8_t* buffer) {
 	*value = buffer[0] | ((uint64_t)buffer[1] << 8);

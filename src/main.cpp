@@ -21,7 +21,7 @@
 #include "CommandParser.h"
 #include "DelayedProcessing.h"
 #include "DictionaryHelper.h"
-#include "FirmwareContainer.h"
+#include "FirmwareUpdater.h"
 #include "ObjectPath.h"
 #include "SbcDecodeThread.h"
 #include "SbcMediaEndpoint.h"
@@ -121,8 +121,9 @@ public:
 		  media_endpoint_(NULL),
 		  adapter_media_interface_(NULL),
 		  playback_thread_(NULL),
-		  last_connect_time_(0),
-		  last_discovery_time_(0),
+		  ping_proc_token_(0),
+		  reconnect_token_(0),
+		  update_checker_token_(0),
 		  command_parser_(FLAGS_command_file) {
 	}
 
@@ -197,23 +198,24 @@ public:
 			}
 			if (FLAGS_autoconnect) {
 				audio_src->connectAsync();
-				last_connect_time_ = timeGetTime();
 			}
 		}
 	}
 
 	void startDiscoverable() {
-		last_discovery_time_ = timeGetTime();
-		adapter_->refreshProperties();
-		if (!adapter_->getDiscoverable()) {
-			LOG(INFO) << "Set discoverable.";
-			adapter_->setDiscoverable(true);
-			//adapter_->setDiscoverableTimeout(3*60); // 3 minutes;
-		}
-		if (!adapter_->getPairable()) {
-			LOG(INFO) << "Set pairable.";
-			adapter_->setPairable(true);
-		//  adapter_->setPairableTimeout(3*60);
+		MyAudioSource* connected_source = sourceConnected();
+		if (NULL == connected_source && !isSourceConnecting()) {
+			adapter_->refreshProperties();
+			if (!adapter_->getDiscoverable()) {
+				LOG(INFO) << "Set discoverable.";
+				adapter_->setDiscoverable(true);
+				//adapter_->setDiscoverableTimeout(3*60); // 3 minutes;
+			}
+			if (!adapter_->getPairable()) {
+				LOG(INFO) << "Set pairable.";
+				adapter_->setPairable(true);
+			//  adapter_->setPairableTimeout(3*60);
+			}
 		}
 	}
 
@@ -284,10 +286,6 @@ public:
 	    	if (elapsedTime(audio_src->getLastConenctTime()) >
 	    			CONNECT_TIMEOUT) {
 	    		LOG(INFO) << "Device initiated connect.";
-
-    			// Update the last_connect_time_ timer, so we don't initiate
-	    		// group reconnects.
-				last_connect_time_ = timeGetTime();
 
 	    		// Get the device we are currently connected to.
     			MyAudioSource* current = sourceConnected();
@@ -381,6 +379,30 @@ public:
 		command_parser_.sendStatus("@&PING\n");
 	}
 
+	void tryReconnect() {
+		MyAudioSource* connected_source = sourceConnected();
+		if (NULL == connected_source && !audio_sources_.empty()) {
+			LOG(INFO) << "Nothing connected for a while. Retry.";
+			initiateConnection();
+		}
+	}
+
+	void removeReconnect() {
+		LOG(INFO) << "Removing reconnect timer proc";
+		iqurius::RemoveTimerCallback(reconnect_token_);
+	}
+
+	void checkForUpdates() {
+		if (updater_.checkUpdateAvailable()) {
+			LOG(INFO) << "Found firmware update";
+		}
+	}
+
+	void removeUpdateChecker() {
+		LOG(INFO) << "Removing update checker timer proc";
+		iqurius::RemoveTimerCallback(update_checker_token_);
+	}
+
 	void loop() {
 		dbus::ObjectPath adapter_path;
 		if (!getAdapterPath("", &adapter_path)) {
@@ -422,26 +444,32 @@ public:
 			startDiscoverable();
 		}
 		uint32_t start_time = timeGetTime();
-		iqurius::PostTimerCallback(1000, googleapis::NewPermanentCallback(
-				this,
+
+		// Schedule periodic callbacks
+		ping_proc_token_ = iqurius::PostTimerCallback(PING_TIME,
+			googleapis::NewPermanentCallback(this,
 				&Application::sendPing));
+
+		reconnect_token_ = 0;
+		if (FLAGS_autoconnect) {
+			reconnect_token_ = iqurius::PostTimerCallback(RECONNECT_TIME,
+				googleapis::NewPermanentCallback(this,
+					&Application::tryReconnect));
+			iqurius::PostDelayedCallback(TRY_CONNECT_TIME,
+				googleapis::NewCallback(this, &Application::removeReconnect));
+		}
+
+		iqurius::PostTimerCallback(DISCOVERY_FLAG_RETRY_TIMEOUT,
+			googleapis::NewPermanentCallback(this,
+				&Application::startDiscoverable));
+
+		update_checker_token_ = iqurius::PostTimerCallback(UPDATE_CHECK_TIME,
+			googleapis::NewPermanentCallback(this,
+				&Application::checkForUpdates));
+		iqurius::PostDelayedCallback(UPDATE_CHECK_TIMEOUT,
+			googleapis::NewCallback(this, &Application::removeUpdateChecker));
 		do
 		{
-			MyAudioSource* connected_source = sourceConnected();
-			if (NULL == connected_source &&
-				FLAGS_autoconnect &&
-				elapsedTime(start_time) < TRY_CONNECT_TIME &&
-				!audio_sources_.empty() &&
-				elapsedTime(last_connect_time_) > RECONNECT_TIME) {
-				LOG(INFO) << "Nothing connected for a while. Retry.";
-				initiateConnection();
-			}
-			if (NULL == connected_source &&
-				!isSourceConnecting() &&
-				elapsedTime(last_discovery_time_) >
-					DISCOVERY_FLAG_RETRY_TIMEOUT) {
-				startDiscoverable();
-			}
 			command_parser_.process();
 			iqurius::ProcessDelayedCalls();
 			conn_.process(100); // 100ms timeout
@@ -452,9 +480,12 @@ public:
 private:
 	static const uint32_t TRY_CONNECT_TIME = 90000;
 	static const uint32_t RECONNECT_TIME = 20000;
+	static const uint32_t PING_TIME = 1000;
 	static const uint32_t CONNECT_TIMEOUT = 10000;
 	static const uint32_t PLAY_TIMEOUT = 15000;
 	static const uint32_t DISCOVERY_FLAG_RETRY_TIMEOUT = 5000;
+	static const uint32_t UPDATE_CHECK_TIME = 2000;
+	static const uint32_t UPDATE_CHECK_TIMEOUT = 60000;
 
 	dbus::Connection conn_;
 	dbus::BluezAdapter* adapter_;
@@ -462,8 +493,10 @@ private:
 	dbus::SbcMediaEndpoint* media_endpoint_;
 	dbus::BluezMedia* adapter_media_interface_;
 	dbus::PlaybackThread* playback_thread_;
-	uint32_t last_connect_time_;
-	uint32_t last_discovery_time_;
+	uint32_t ping_proc_token_;
+	uint32_t reconnect_token_;
+	uint32_t update_checker_token_;
+	iqurius::FirmwareUpdater updater_;
 	std::list<MyAudioSource*> audio_sources_;
 	CommandParser command_parser_;
 };
@@ -479,7 +512,7 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 	Application app;
-	if (!app.connectBus()) {
+	if (app.connectBus()) {
 		LOG(ERROR) << "Can't connect to the system D-Bus.";
 		return 2;
 	}
