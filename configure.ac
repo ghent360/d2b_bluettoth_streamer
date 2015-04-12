@@ -68,6 +68,17 @@ PKG_CHECK_MODULES(libglog, [libglog >= $LIBGLOG_REQUIRED_VERSION],,
 AC_SUBST(libglog_CFLAGS)
 AC_SUBST(libglog_LIBS)
 
+AC_ARG_WITH([systemdunitdir], 
+    AC_HELP_STRING([--with-systemdunitdir=DIR],
+    [path to systemd system service directory]), 
+    [path_systemdunit=${withval}],
+    [path_systemdunit="`$PKG_CONFIG --variable=systemdsystemunitdir systemd`"])
+if (test -n "${path_systemdunit}"); then
+   SYSTEMD_UNITDIR="${path_systemdunit}"
+   AC_SUBST(SYSTEMD_UNITDIR)
+fi
+AM_CONDITIONAL(SYSTEMD, test -n "${path_systemdunit}")
+
 AC_CONFIG_FILES([
  Makefile
  googleapis/base/Makefile

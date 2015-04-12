@@ -1,0 +1,15 @@
+[Unit]
+Description=A2DP Bluetoot streaming daemon
+Documentation=http://google.com
+Requires=bluetooth.target
+Requires=sound.target
+After=bluetooth.target
+After=sound.target
+
+[Service]
+ExecStart=-/usr/bin/bt_a2dp --autoconnect -log_dir /storage/logs -command_file /dev/ttyAMA0
+Type=simple
+Restart=always
+
+[Install]
+WantedBy=a2dp.target

@@ -19,7 +19,7 @@
 
 namespace iqurius {
 
-#define CONTAINER_MAGIC_NUMBER 'IQFW'
+#define CONTAINER_MAGIC_NUMBER 0x57465149
 
 constexpr int MAX_DIGEST_SIZE = 256 / 8;
 
@@ -56,7 +56,7 @@ public:
 	}
 
 	bool addFile(const char* path,
-			int prefix_len_ = 0,
+			size_t prefix_len_ = 0,
 			bool to_storage = false);
 	bool addFile(const char* path,
 			const char* archive_path,

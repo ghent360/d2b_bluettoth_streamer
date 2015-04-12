@@ -101,7 +101,7 @@ exit:
 }
 
 bool FirmwareContainerWriter::addFile(const char* path,
-		int prefix_len,
+		size_t prefix_len,
 		bool to_storage) {
 	std::string archive_path(path);
 	if (prefix_len > 0) {
@@ -189,7 +189,7 @@ bool FirmwareContainerWriter::writeContainer(const char* path) {
 	bool result = false;
 	uint8_t* input_buffer = NULL;
 	size_t input_buffer_len;
-	size_t output_buffer_len;
+	lzo_uint output_buffer_len;
 	size_t write_len;
 	uint8_t* compression_buffer = NULL;
 	uint8_t* work_memory = NULL;
@@ -294,7 +294,7 @@ bool FirmwareContainerWriter::compressFile(const FileInfo& file_info,
 		uint8_t* work_memory) {
 	FILE* input = NULL;
 	size_t len;
-	size_t output_len;
+	lzo_uint output_len;
 	size_t write_len;
 	int rc;
 	bool result = false;
@@ -374,7 +374,7 @@ bool FirmwareContainerReader::loadManifest() {
 	uint32_t magic;
 	uint32_t input_len;
 	uint32_t compressed_len;
-	size_t output_len;
+	lzo_uint output_len;
 	size_t read_len;
 	int rc;
 
@@ -525,7 +525,7 @@ bool FirmwareContainerReader::verifyFiles() {
 	const unsigned int digest_len = gcry_md_get_algo_dlen(g_HashAlgo);
 	unsigned char *file_digest;
 	size_t read_len;
-	size_t output_len;
+	lzo_uint output_len;
 	int rc;
 	bool result = false;
 
@@ -624,7 +624,7 @@ bool FirmwareContainerReader::performUpdate(const char* flash_path,
 	uint8_t* compressed_buffer = NULL;
 	uint8_t* output_buffer = NULL;
 	size_t read_len;
-	size_t output_len;
+	lzo_uint output_len;
 	int rc;
 	bool result = false;
     struct stat stat_buf;
