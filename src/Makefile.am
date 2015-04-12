@@ -17,10 +17,12 @@ bt_a2dp_SOURCES =               \
     ../include/BluezAdapter.h          \
     BluezAgent.cpp              \
     ../include/BluezAgent.h            \
-    FirmwareUpdater.cpp              \
-    ../include/FirmwareUpdater.h            \
+    DelayedProcessing.cpp              \
+    ../include/DelayedProcessing.h            \
     FirmwareContainer.cpp              \
     ../include/FirmwareContainer.h            \
+    FirmwareUpdater.cpp              \
+    ../include/FirmwareUpdater.h            \
     MediaEndpoint.cpp	        \
     ../include/MediaEndpoint.h         \
     PlaybackThread.cpp          \

@@ -19,6 +19,7 @@
 #include "BluezNames.h"
 #include "Connection.h"
 #include "CommandParser.h"
+#include "DelayedProcessing.h"
 #include "DictionaryHelper.h"
 #include "FirmwareContainer.h"
 #include "ObjectPath.h"
@@ -29,6 +30,7 @@
 #include <dbus/dbus.h>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+#include <googleapis/base/callback.h>
 #include <lzo/lzoconf.h>
 #include <lzo/lzo1x.h>
 #include <stdint.h>
@@ -175,12 +177,14 @@ public:
 
 	MyAudioSource* createAudioSource(dbus::ObjectPath device_path) {
 		MyAudioSource* audio_src = new MyAudioSource(&conn_, device_path);
-		audio_src->setOnStateChangeCallback(googleapis::NewPermanentCallback(this,
-				&Application::onAudioStateChange));
+		audio_src->setOnStateChangeCallback(
+				googleapis::NewPermanentCallback(this,
+						&Application::onAudioStateChange));
 		audio_sources_.push_back(audio_src);
 		conn_.addObject(audio_src);
 
-		audio_src->setTargetControl(new dbus::AudioTargetControl(&conn_, device_path));
+		audio_src->setTargetControl(new dbus::AudioTargetControl(&conn_,
+				device_path));
 		return audio_src;
 	}
 
@@ -255,7 +259,8 @@ public:
 
 	    case dbus::AudioSource::State::CONNECTED:
 			LOG(INFO) << "Connected to " << audio_src->getPathToSelf();
-	    	// If this device was in playing state, stop the playback, otherwise ignore.
+	    	// If this device was in playing state, stop the playback,
+			// otherwise ignore.
 	    	if (prev_state == dbus::AudioSource::State::PLAYING) {
 	    		stopPlayback();
 	    	}
@@ -264,7 +269,8 @@ public:
 	    	break;
 
 	    case dbus::AudioSource::State::DISCONNECTED:
-	    	// If this device was in playing state, stop the playback, otherwise ignore.
+	    	// If this device was in playing state, stop the playback,
+	    	// otherwise ignore.
 	    	if (prev_state == dbus::AudioSource::State::PLAYING) {
 	    		stopPlayback();
 	    	}
@@ -272,28 +278,36 @@ public:
 	    	break;
 
 	    case dbus::AudioSource::State::CONNECTING:
-	    	// We want to differentiate between connect attempts we initiated and
-	    	// connections originating from the device, which are user initiated.
-	    	if (elapsedTime(audio_src->getLastConenctTime()) > CONNECT_TIMEOUT) {
+	    	// We want to differentiate between connect attempts we initiated
+	    	// and connections originating from the device, which are user
+	    	// initiated.
+	    	if (elapsedTime(audio_src->getLastConenctTime()) >
+	    			CONNECT_TIMEOUT) {
 	    		LOG(INFO) << "Device initiated connect.";
 
-    			// Update the last_connect_time_ timer, so we don't initiate group reconnects.
+    			// Update the last_connect_time_ timer, so we don't initiate
+	    		// group reconnects.
 				last_connect_time_ = timeGetTime();
 
 	    		// Get the device we are currently connected to.
     			MyAudioSource* current = sourceConnected();
     			if (NULL != current &&
     				current->getPathToSelf() != ctx->getPathToSelf()) {
-    				dbus::AudioSource::State current_state = current->getState();
-    				uint32_t time_since_last_play = elapsedTime(current->getLastPlayTime());
+    				dbus::AudioSource::State current_state =
+    						current->getState();
+    				uint32_t time_since_last_play = elapsedTime(
+    						current->getLastPlayTime());
     				if (current_state != dbus::AudioSource::State::PLAYING &&
     					time_since_last_play > PLAY_TIMEOUT) {
-    					// If the device is not currently playing and it's been on pause for a while,
-    					// it's probably ok to disconnect it.
-    					LOG(INFO) << "Disconnecting " << current->getPathToSelf();
+    					// If the device is not currently playing and it's been
+    					// on pause for a while, it's probably ok to disconnect
+    					// it.
+    					LOG(INFO) << "Disconnecting "
+    							<< current->getPathToSelf();
     					current->disconnectAsync();
 
-    					// And try to connect to the device that was initiating a connection with us.
+    					// And try to connect to the device that was initiating
+    					// a connection with us.
     					audio_src->connectAsync();
     				}
 	    		}
@@ -305,7 +319,8 @@ public:
 	    }
 	}
 
-	bool supports(dbus::BaseMessageIterator& iterator, const char* service_uuid) {
+	bool supports(dbus::BaseMessageIterator& iterator,
+			const char* service_uuid) {
 		auto services = iterator.recurse();
 		while (services.getArgumentType() == DBUS_TYPE_STRING) {
 			const char* service_id = services.getString();
@@ -335,23 +350,35 @@ public:
 			control->refreshProperties();
 			control->updatePlayStatus();
 			if (cmd == CMD_PLAY || cmd == CMD_CONT) {
-				if (control->getStatus() != dbus::AudioTargetControl::STATUS_PLAYING) {
-					control->sendButton(dbus::AudioTargetControl::BUTTON_ID_PLAY);
+				if (control->getStatus() !=
+						dbus::AudioTargetControl::STATUS_PLAYING) {
+					control->sendButton(
+							dbus::AudioTargetControl::BUTTON_ID_PLAY);
 				}
 			} else if (cmd == CMD_PAUS || cmd == CMD_STOP) {
-				if (control->getStatus() == dbus::AudioTargetControl::STATUS_PLAYING) {
-					control->sendButton(dbus::AudioTargetControl::BUTTON_ID_PAUSE);
+				if (control->getStatus() ==
+						dbus::AudioTargetControl::STATUS_PLAYING) {
+					control->sendButton(
+							dbus::AudioTargetControl::BUTTON_ID_PAUSE);
 				}
 			} else if (cmd == CMD_NTRK) {
-				if (control->getStatus() == dbus::AudioTargetControl::STATUS_PLAYING) {
-					control->sendButton(dbus::AudioTargetControl::BUTTON_ID_NEXT);
+				if (control->getStatus() ==
+						dbus::AudioTargetControl::STATUS_PLAYING) {
+					control->sendButton(
+							dbus::AudioTargetControl::BUTTON_ID_NEXT);
 				}
 			} else if (cmd == CMD_PTRK) {
-				if (control->getStatus() == dbus::AudioTargetControl::STATUS_PLAYING) {
-					control->sendButton(dbus::AudioTargetControl::BUTTON_ID_PREV);
+				if (control->getStatus() ==
+						dbus::AudioTargetControl::STATUS_PLAYING) {
+					control->sendButton(
+							dbus::AudioTargetControl::BUTTON_ID_PREV);
 				}
 			}
 		}
+	}
+
+	void sendPing() {
+		command_parser_.sendStatus("@&PING\n");
 	}
 
 	void loop() {
@@ -387,13 +414,17 @@ public:
 		conn_.addObject(media_endpoint_);
 
 		command_parser_.setCommandCllaback(
-				googleapis::NewPermanentCallback(this, &Application::onCommand));
+				googleapis::NewPermanentCallback(this,
+						&Application::onCommand));
 
 		initiateConnection();
 		if (audio_sources_.empty()) {
 			startDiscoverable();
 		}
 		uint32_t start_time = timeGetTime();
+		iqurius::PostTimerCallback(1000, googleapis::NewPermanentCallback(
+				this,
+				&Application::sendPing));
 		do
 		{
 			MyAudioSource* connected_source = sourceConnected();
@@ -407,10 +438,12 @@ public:
 			}
 			if (NULL == connected_source &&
 				!isSourceConnecting() &&
-				elapsedTime(last_discovery_time_) > DISCOVERY_FLAG_RETRY_TIMEOUT) {
+				elapsedTime(last_discovery_time_) >
+					DISCOVERY_FLAG_RETRY_TIMEOUT) {
 				startDiscoverable();
 			}
 			command_parser_.process();
+			iqurius::ProcessDelayedCalls();
 			conn_.process(100); // 100ms timeout
 		} while (true);
 		adapter_media_interface_->unregisterEndpoint(*media_endpoint_);
@@ -445,16 +478,11 @@ int main(int argc, char *argv[]) {
 		LOG(ERROR) << "Error initializing the LZO library";
 		return 1;
 	}
-	//iqurius::FirmwareContainerWriter fcw("6.0-dev");
-	//fcw.addFile("/home/vne/raspi/OpenELEC.tv/target/OpenBT-RPi.arm-6.0-dev.system", "SYSTEM");
-	//fcw.addFile("/home/vne/raspi/OpenELEC.tv/target/OpenBT-RPi.arm-6.0-dev.kernel", "kernel.img");
-	//fcw.writeContainer("/tmp/obt.fwu");
-	iqurius::FirmwareContainerReader fcr("/tmp/obt.fwu");
-	fcr.loadManifest();
-	fcr.verifyFiles();
-	fcr.performUpdate("/tmp/flash/", "/tmp/storage/");
 	Application app;
-	app.connectBus();
+	if (!app.connectBus()) {
+		LOG(ERROR) << "Can't connect to the system D-Bus.";
+		return 2;
+	}
 	app.loop();
 	LOG(INFO) << "Exiting audio daemon";
 	return 0;
