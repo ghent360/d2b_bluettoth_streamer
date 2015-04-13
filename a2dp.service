@@ -7,7 +7,7 @@ After=bluetooth.target
 After=sound.target
 
 [Service]
-ExecStart=-/usr/bin/bt_a2dp --autoconnect -log_dir /storage/logs -command_file /dev/ttyAMA0
+ExecStart=-/usr/bin/bt_a2dp --autoconnect -command_file /dev/ttyAMA0
 Type=simple
 Restart=always
 

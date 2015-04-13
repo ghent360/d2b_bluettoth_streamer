@@ -189,22 +189,24 @@ public:
 		return audio_src;
 	}
 
-	void initiateConnection() {
-		adapter_->refreshProperties();
-		for (dbus::ObjectPath device_path : adapter_->getDevices()) {
-			MyAudioSource* audio_src = findAudioSource(device_path);
-			if (audio_src == NULL) {
-				audio_src = createAudioSource(device_path);
-			}
-			if (FLAGS_autoconnect) {
-				audio_src->connectAsync();
+	void enumerateBluetoothDevices() {
+		if (adapter_) {
+			adapter_->refreshProperties();
+			for (dbus::ObjectPath device_path : adapter_->getDevices()) {
+				MyAudioSource* audio_src = findAudioSource(device_path);
+				if (audio_src == NULL) {
+					audio_src = createAudioSource(device_path);
+				}
+				if (FLAGS_autoconnect) {
+					audio_src->connectAsync();
+				}
 			}
 		}
 	}
 
 	void startDiscoverable() {
 		MyAudioSource* connected_source = sourceConnected();
-		if (NULL == connected_source && !isSourceConnecting()) {
+		if (adapter_ && !connected_source && !isSourceConnecting()) {
 			adapter_->refreshProperties();
 			if (!adapter_->getDiscoverable()) {
 				LOG(INFO) << "Set discoverable.";
@@ -220,14 +222,16 @@ public:
 	}
 
 	void stopDiscoverable() {
-		adapter_->refreshProperties();
-		if (adapter_->getDiscoverable()) {
-			LOG(INFO) << "Stop discoverable.";
-			adapter_->setDiscoverable(false);
+		if (adapter_) {
+			adapter_->refreshProperties();
+			if (adapter_->getDiscoverable()) {
+				LOG(INFO) << "Stop discoverable.";
+				adapter_->setDiscoverable(false);
+			}
+			//if (adapter_->getPairable()) {
+			//	adapter_->setPairable(false);
+			//}
 		}
-		//if (adapter_->getPairable()) {
-		//	adapter_->setPairable(false);
-		//}
 	}
 
 	void stopPlayback() {
@@ -241,10 +245,12 @@ public:
 
 	void startPlayback() {
 		stopPlayback();
-	    playback_thread_ = new dbus::SbcDecodeThread(&conn_,
-	    		media_endpoint_->getTransportPath());
-	    playback_thread_->start();
-	    LOG(INFO) << "Started playback thread.";
+		if (media_endpoint_) {
+			playback_thread_ = new dbus::SbcDecodeThread(&conn_,
+					media_endpoint_->getTransportPath());
+			playback_thread_->start();
+			LOG(INFO) << "Started playback thread.";
+		}
 	}
 
 	void onAudioStateChange(dbus::AudioSource::State value,
@@ -253,7 +259,7 @@ public:
 		dbus::AudioSource::State prev_state = audio_src->getState();
 	    switch (value) {
 	    case dbus::AudioSource::State::PLAYING:
-	    	if (media_endpoint_->isTransportConfigValid()) {
+	    	if (media_endpoint_ && media_endpoint_->isTransportConfigValid()) {
 	    		startPlayback();
 		    	command_parser_.sendStatus("@&PLAY\n");
 	    	}
@@ -383,13 +389,14 @@ public:
 		MyAudioSource* connected_source = sourceConnected();
 		if (NULL == connected_source && !audio_sources_.empty()) {
 			LOG(INFO) << "Nothing connected for a while. Retry.";
-			initiateConnection();
+			enumerateBluetoothDevices();
 		}
 	}
 
 	void removeReconnect() {
 		LOG(INFO) << "Removing reconnect timer proc";
 		iqurius::RemoveTimerCallback(reconnect_token_);
+		reconnect_token_ = 0;
 	}
 
 	void checkForUpdates() {
@@ -401,15 +408,19 @@ public:
 	void removeUpdateChecker() {
 		LOG(INFO) << "Removing update checker timer proc";
 		iqurius::RemoveTimerCallback(update_checker_token_);
+		update_checker_token_ = 0;
 	}
 
-	void loop() {
-		dbus::ObjectPath adapter_path;
-		if (!getAdapterPath("", &adapter_path)) {
-			LOG(ERROR) << "Unable to connect to the bluetooth adapter";
+	void connectToBluetoothAdapter() {
+		if (adapter_) {
+			LOG(WARNING) << "Bluetooth adapter already is connected";
 			return;
 		}
 
+		dbus::ObjectPath adapter_path;
+		if (!getAdapterPath("", &adapter_path)) {
+			return;
+		}
 		adapter_ = new dbus::BluezAdapter(&conn_, adapter_path);
 		conn_.addObject(adapter_);
 
@@ -417,47 +428,60 @@ public:
 		conn_.addObject(agent_);
 
 		adapter_->registerAgent(agent_);
-		adapter_media_interface_ = new dbus::BluezMedia(&conn_, adapter_path);
+		adapter_media_interface_ = new dbus::BluezMedia(&conn_,
+				adapter_path);
 
-		adapter_->setDeviceCreatedCallback(googleapis::NewPermanentCallback(
-				this, &Application::onDeviceCreated));
+		adapter_->setDeviceCreatedCallback(
+			googleapis::NewPermanentCallback(this,
+				&Application::onDeviceCreated));
 		adapter_->setName("iQurius JSync");
 
 		media_endpoint_ = new dbus::SbcMediaEndpoint();
 		//media_endpoint_ = new dbus::AacMediaEndpoint();
-		if (!adapter_media_interface_->registerEndpoint(*media_endpoint_)) {
+		if (!adapter_media_interface_->registerEndpoint(
+				*media_endpoint_)) {
 			LOG(ERROR) << "Unable to register the A2DP sync. Check if bluez \n"
-					"has audio support and the configuration is enabled.";
+				"has audio support and the configuration is enabled.";
 			delete media_endpoint_;
 			delete adapter_media_interface_;
+			delete agent_;
 			delete adapter_;
+			adapter_ = NULL;
+			agent_ = NULL;
+			adapter_media_interface_ = NULL;
+			media_endpoint_ = NULL;
 			return;
 		}
 		conn_.addObject(media_endpoint_);
 
-		command_parser_.setCommandCllaback(
-				googleapis::NewPermanentCallback(this,
-						&Application::onCommand));
-
-		initiateConnection();
+		enumerateBluetoothDevices();
 		if (audio_sources_.empty()) {
 			startDiscoverable();
 		}
-		uint32_t start_time = timeGetTime();
+
+		if (FLAGS_autoconnect && !reconnect_token_) {
+			reconnect_token_ = iqurius::PostTimerCallback(RECONNECT_TIME,
+				googleapis::NewPermanentCallback(this,
+					&Application::tryReconnect));
+			iqurius::PostDelayedCallback(RECONNECT_TIMEOUT,
+				googleapis::NewCallback(this, &Application::removeReconnect));
+		}
+
+		LOG(INFO) << "Connected to bluetooth adapter " << adapter_path;
+		return;
+	}
+
+	void mainLoop() {
+		command_parser_.setCommandCllaback(
+				googleapis::NewPermanentCallback(this,
+						&Application::onCommand));
 
 		// Schedule periodic callbacks
 		ping_proc_token_ = iqurius::PostTimerCallback(PING_TIME,
 			googleapis::NewPermanentCallback(this,
 				&Application::sendPing));
 
-		reconnect_token_ = 0;
-		if (FLAGS_autoconnect) {
-			reconnect_token_ = iqurius::PostTimerCallback(RECONNECT_TIME,
-				googleapis::NewPermanentCallback(this,
-					&Application::tryReconnect));
-			iqurius::PostDelayedCallback(TRY_CONNECT_TIME,
-				googleapis::NewCallback(this, &Application::removeReconnect));
-		}
+		connectToBluetoothAdapter();
 
 		iqurius::PostTimerCallback(DISCOVERY_FLAG_RETRY_TIMEOUT,
 			googleapis::NewPermanentCallback(this,
@@ -478,8 +502,8 @@ public:
 		delete adapter_media_interface_;
 	}
 private:
-	static const uint32_t TRY_CONNECT_TIME = 90000;
 	static const uint32_t RECONNECT_TIME = 20000;
+	static const uint32_t RECONNECT_TIMEOUT = 90000;
 	static const uint32_t PING_TIME = 1000;
 	static const uint32_t CONNECT_TIMEOUT = 10000;
 	static const uint32_t PLAY_TIMEOUT = 15000;
@@ -516,7 +540,7 @@ int main(int argc, char *argv[]) {
 		LOG(ERROR) << "Can't connect to the system D-Bus.";
 		return 2;
 	}
-	app.loop();
+	app.mainLoop();
 	LOG(INFO) << "Exiting audio daemon";
 	return 0;
 }

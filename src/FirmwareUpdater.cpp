@@ -21,7 +21,7 @@ namespace iqurius {
 
 static const char g_FlashMountPoint[] = "/flash";
 static const char g_StorageMountPoint[] = "/storage";
-static const char g_MediaMountPoint[] = "/media/vne";
+static const char g_MediaMountPoint[] = "/media";
 static const char g_UpdateFileName[] = "iqjs.fwu";
 
 bool FirmwareUpdater::remountFlash(bool read_only) {
