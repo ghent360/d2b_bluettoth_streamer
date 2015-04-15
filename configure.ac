@@ -84,6 +84,7 @@ AC_CONFIG_FILES([
  googleapis/base/Makefile
  sbc/Makefile
  src/Makefile
+ a2dp.service
 ])
 AC_OUTPUT
 
