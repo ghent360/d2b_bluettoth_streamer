@@ -22,6 +22,7 @@
 #include "DelayedProcessing.h"
 #include "DictionaryHelper.h"
 #include "FirmwareUpdater.h"
+#include "MixerThread.h"
 #include "ObjectPath.h"
 #include "SbcDecodeThread.h"
 #include "SbcMediaEndpoint.h"
@@ -535,12 +536,20 @@ int main(int argc, char *argv[]) {
 		LOG(ERROR) << "Error initializing the LZO library";
 		return 1;
 	}
+	/*
 	Application app;
 	if (app.connectBus()) {
 		LOG(ERROR) << "Can't connect to the system D-Bus.";
 		return 2;
 	}
 	app.mainLoop();
+	*/
+	iqurius::MixerThread mt;
+	for (int i = 0; i < 20; ++i) {
+		mt.start();
+		sleep(2);
+		mt.stop();
+	}
 	LOG(INFO) << "Exiting audio daemon";
 	return 0;
 }

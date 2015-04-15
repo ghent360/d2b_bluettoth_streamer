@@ -27,6 +27,8 @@ bt_a2dp_SOURCES =               \
     ../include/MediaEndpoint.h         \
     PlaybackThread.cpp          \
     ../include/PlaybackThread.h        \
+    MixerThread.cpp          \
+    ../include/MixerThread.h        \
     BluezManager.cpp            \
     ../include/BluezManager.h          \
     MediaTransport.cpp	        \

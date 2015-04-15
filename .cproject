@@ -55,8 +55,37 @@
 			<resource resourceType="PROJECT" workspacePath="/bt-audio"/>
 		</configuration>
 	</storageModule>
+	<storageModule moduleId="scannerConfiguration">
+		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.600986385;cdt.managedbuild.config.gnu.exe.debug.600986385.;cdt.managedbuild.tool.gnu.c.compiler.exe.debug.1469736948;cdt.managedbuild.tool.gnu.c.compiler.input.2024993463">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.1134706754;cdt.managedbuild.config.gnu.exe.release.1134706754.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.2051748631;cdt.managedbuild.tool.gnu.cpp.compiler.input.1248438085">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.1134706754;cdt.managedbuild.config.gnu.exe.release.1134706754.;cdt.managedbuild.tool.gnu.c.compiler.exe.release.1905552129;cdt.managedbuild.tool.gnu.c.compiler.input.665505036">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="org.eclipse.linuxtools.cdt.autotools.core.configuration.build.1017273412;org.eclipse.linuxtools.cdt.autotools.core.configuration.build.1017273412.;org.eclipse.linuxtools.cdt.autotools.core.toolchain.tool.gcc.1496598859;cdt.managedbuild.tool.gnu.c.compiler.input.2129410554">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.600986385;cdt.managedbuild.config.gnu.exe.debug.600986385.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1200844310;cdt.managedbuild.tool.gnu.cpp.compiler.input.1608297061">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="org.eclipse.linuxtools.cdt.autotools.core.configuration.build.1017273412;org.eclipse.linuxtools.cdt.autotools.core.configuration.build.1017273412.;org.eclipse.linuxtools.cdt.autotools.core.toolchain.tool.gpp.210923863;cdt.managedbuild.tool.gnu.cpp.compiler.input.555746723">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets">
 		<buildTargets>
+			<target name="a2dp.service" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+				<buildCommand>make</buildCommand>
+				<buildArguments/>
+				<buildTarget>a2dp.service</buildTarget>
+				<stopOnError>true</stopOnError>
+				<useDefaultCommand>true</useDefaultCommand>
+				<runAllBuilders>false</runAllBuilders>
+			</target>
 			<target name="all" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 				<buildCommand>make</buildCommand>
 				<buildArguments/>
@@ -385,6 +414,14 @@
 				<useDefaultCommand>true</useDefaultCommand>
 				<runAllBuilders>false</runAllBuilders>
 			</target>
+			<target name="install-systemdunitDATA" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+				<buildCommand>make</buildCommand>
+				<buildArguments/>
+				<buildTarget>install-systemdunitDATA</buildTarget>
+				<stopOnError>true</stopOnError>
+				<useDefaultCommand>true</useDefaultCommand>
+				<runAllBuilders>false</runAllBuilders>
+			</target>
 			<target name="installcheck" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 				<buildCommand>make</buildCommand>
 				<buildArguments/>
@@ -473,27 +510,14 @@
 				<useDefaultCommand>true</useDefaultCommand>
 				<runAllBuilders>false</runAllBuilders>
 			</target>
+			<target name="uninstall-systemdunitDATA" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+				<buildCommand>make</buildCommand>
+				<buildArguments/>
+				<buildTarget>uninstall-systemdunitDATA</buildTarget>
+				<stopOnError>true</stopOnError>
+				<useDefaultCommand>true</useDefaultCommand>
+				<runAllBuilders>false</runAllBuilders>
+			</target>
 		</buildTargets>
-	</storageModule>
-	<storageModule moduleId="scannerConfiguration">
-		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.600986385;cdt.managedbuild.config.gnu.exe.debug.600986385.;cdt.managedbuild.tool.gnu.c.compiler.exe.debug.1469736948;cdt.managedbuild.tool.gnu.c.compiler.input.2024993463">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.1134706754;cdt.managedbuild.config.gnu.exe.release.1134706754.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.2051748631;cdt.managedbuild.tool.gnu.cpp.compiler.input.1248438085">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.1134706754;cdt.managedbuild.config.gnu.exe.release.1134706754.;cdt.managedbuild.tool.gnu.c.compiler.exe.release.1905552129;cdt.managedbuild.tool.gnu.c.compiler.input.665505036">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="org.eclipse.linuxtools.cdt.autotools.core.configuration.build.1017273412;org.eclipse.linuxtools.cdt.autotools.core.configuration.build.1017273412.;org.eclipse.linuxtools.cdt.autotools.core.toolchain.tool.gcc.1496598859;cdt.managedbuild.tool.gnu.c.compiler.input.2129410554">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.600986385;cdt.managedbuild.config.gnu.exe.debug.600986385.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1200844310;cdt.managedbuild.tool.gnu.cpp.compiler.input.1608297061">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="org.eclipse.linuxtools.cdt.autotools.core.configuration.build.1017273412;org.eclipse.linuxtools.cdt.autotools.core.configuration.build.1017273412.;org.eclipse.linuxtools.cdt.autotools.core.toolchain.tool.gpp.210923863;cdt.managedbuild.tool.gnu.cpp.compiler.input.555746723">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		</scannerConfigBuildInfo>
 	</storageModule>
 </cproject>

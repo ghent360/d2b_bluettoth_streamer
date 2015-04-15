@@ -32,10 +32,14 @@ void PlaybackThread::stop() {
 	if (running_) {
 		signal_stop_ = true;
 		pthread_join(thread_, NULL);
+		running_ = false;
+	}
+	if (fd_) {
 		transport_.release("rw");
 		close(fd_);
 		fd_ = 0;
-		running_ = false;
+  	    read_mtu_ = 0;
+  	    write_mtu_ = 0;
 	}
 	if (pcm_handle_) {
 		snd_pcm_close(pcm_handle_);
@@ -48,26 +52,45 @@ void PlaybackThread::setPcmParams() {
 
 void PlaybackThread::start() {
     if (!running_) {
-  	    fd_ = 0;
-  	    read_mtu_ = 0;
-  	    write_mtu_ = 0;
-    	if (transport_.acquire("rw", &fd_, &read_mtu_, &write_mtu_)) {
-    		signal_stop_ = false;
-            pthread_create(&thread_, NULL, threadProc, this);
-            running_ = true;
+    	if (fd_) {
+    		transport_.release("rw");
+    		close(fd_);
+      	    fd_ = 0;
+      	    read_mtu_ = 0;
+      	    write_mtu_ = 0;
     	}
-    	int err = snd_pcm_open(&pcm_handle_, "default", SND_PCM_STREAM_PLAYBACK, 0);
-    	if (err < 0) {
-    		LOG(ERROR) << "Error opening pcm stream: " << snd_strerror(err);
-    		pcm_handle_ = NULL;
-    	} else {
-    		err = snd_pcm_set_params(pcm_handle_, SND_PCM_FORMAT_S16_LE,
-    				SND_PCM_ACCESS_RW_INTERLEAVED, 2, 44100, 0, 250000);
+    	if (transport_.acquire("rw", &fd_, &read_mtu_, &write_mtu_)) {
+    		if (pcm_handle_) {
+    			snd_pcm_close(pcm_handle_);
+    			pcm_handle_ = NULL;
+    		}
+			int err = snd_pcm_open(&pcm_handle_,
+					"default",
+					SND_PCM_STREAM_PLAYBACK,
+					0);
 			if (err < 0) {
-				LOG(ERROR) << "Error configuring pcm stream: " << snd_strerror(err);
-				snd_pcm_close(pcm_handle_);
+				LOG(ERROR) << "Error opening pcm stream: "
+						<< snd_strerror(err);
 				pcm_handle_ = NULL;
-			};
+			} else {
+				err = snd_pcm_set_params(pcm_handle_,
+						SND_PCM_FORMAT_S16_LE,
+						SND_PCM_ACCESS_RW_INTERLEAVED,
+						2,
+						44100,
+						0,
+						250000);
+				if (err < 0) {
+					LOG(ERROR) << "Error configuring pcm stream: "
+							<< snd_strerror(err);
+					snd_pcm_close(pcm_handle_);
+					pcm_handle_ = NULL;
+				} else {
+		    		signal_stop_ = false;
+		            pthread_create(&thread_, NULL, threadProc, this);
+		            running_ = true;
+				}
+			}
     	}
     } else {
     	LOG(WARNING) << "Playback thread already running.";
