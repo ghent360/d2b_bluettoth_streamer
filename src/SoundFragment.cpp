@@ -9,6 +9,7 @@
  */
 
 #include "SoundFragment.h"
+#include "MixerThread.h"
 
 #include <glog/logging.h>
 #include <sys/select.h>
@@ -22,10 +23,15 @@ SoundFragment::SoundFragment(size_t num_samples, uint8_t num_channels) {
   num_samples_ = num_samples;
   samples_ = new uint8_t[num_samples * num_channels * 2];
   channels_ = num_channels;
+  conversion_buffer_ = nullptr;
+  if (channels_ == 1) {
+    conversion_buffer_ = new uint8_t[MixerThread::AUDIO_BUFFER_SIZE * 4];
+  }
 }
 
 SoundFragment::~SoundFragment() {
   delete [] samples_;
+  delete [] conversion_buffer_;
 }
 
 SoundFragment* SoundFragment::fromVorbisFile(const char* path) {
@@ -69,12 +75,11 @@ void SoundFragment::playFragment(AudioChannel* audio_channel) {
   const size_t frame_size = getChannels() * 2;
   const uint8_t* fragment_buffer = getBuffer();
   size_t buffer_len_frames = getBufferSize() / frame_size;
-  uint8_t* conversion_buffer = new uint8_t[MixerThread::AUDIO_BUFFER_SIZE * 4];
 
   while (buffer_len_frames > 0) {
     iqurius::AudioBuffer* audio_buffer = audio_channel->getFreeBuffer();
     if (nullptr == audio_buffer) {
-  	  sleep(0);
+      usleep(10000);
    	  continue;
     }
     size_t buffer_size_frames = audio_buffer->getSize() / 4;
@@ -88,12 +93,12 @@ void SoundFragment::playFragment(AudioChannel* audio_channel) {
     } else {
    	  CHECK(buffer_size_frames <= MixerThread::AUDIO_BUFFER_SIZE);
       for (int idx = 0; idx < buffer_size_frames; ++idx) {
-       	conversion_buffer[idx*4] = fragment_buffer[idx*2];
-        conversion_buffer[idx*4 + 1] = fragment_buffer[idx*2 + 1];
-        conversion_buffer[idx*4 + 2] = fragment_buffer[idx*2];
-        conversion_buffer[idx*4 + 3] = fragment_buffer[idx*2 + 1];
+       	conversion_buffer_[idx*4] = fragment_buffer[idx*2];
+        conversion_buffer_[idx*4 + 1] = fragment_buffer[idx*2 + 1];
+        conversion_buffer_[idx*4 + 2] = fragment_buffer[idx*2];
+        conversion_buffer_[idx*4 + 3] = fragment_buffer[idx*2 + 1];
       }
-      audio_buffer->write(conversion_buffer, buffer_size_frames * 4);
+      audio_buffer->write(conversion_buffer_, buffer_size_frames * 4);
       fragment_buffer += buffer_size_frames * 2;
     }
 	buffer_len_frames -= buffer_size_frames;

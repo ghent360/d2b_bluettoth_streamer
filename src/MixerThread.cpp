@@ -51,6 +51,10 @@ void MixerThread::stop() {
 
 void MixerThread::start() {
     if (!running_) {
+    	if (pcm_handle_) {
+    		snd_pcm_close(pcm_handle_);
+    		pcm_handle_ = NULL;
+    	}
     	int err = snd_pcm_open(&pcm_handle_, "default", SND_PCM_STREAM_PLAYBACK, 0);
     	if (err < 0) {
     		LOG(ERROR) << "Error opening pcm stream: " << snd_strerror(err);
@@ -62,11 +66,12 @@ void MixerThread::start() {
 				LOG(ERROR) << "Error configuring pcm stream: " << snd_strerror(err);
 				snd_pcm_close(pcm_handle_);
 				pcm_handle_ = NULL;
-			};
+			} else {
+				signal_stop_ = false;
+				pthread_create(&thread_, NULL, threadProc, this);
+				running_ = true;
+			}
     	}
-		signal_stop_ = false;
-		pthread_create(&thread_, NULL, threadProc, this);
-		running_ = true;
     } else {
     	LOG(WARNING) << "Playback thread already running.";
     }

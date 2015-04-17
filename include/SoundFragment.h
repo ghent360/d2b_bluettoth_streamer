@@ -17,6 +17,7 @@
 
 namespace iqurius {
 
+class AudioChannel;
 class SoundFragment {
 public:
 	~SoundFragment();
@@ -34,6 +35,7 @@ private:
 	size_t num_samples_;
 	uint8_t* samples_;
 	uint8_t channels_;
+	uint8_t* conversion_buffer_;
 	DISALLOW_COPY_AND_ASSIGN(SoundFragment);
 };
 
