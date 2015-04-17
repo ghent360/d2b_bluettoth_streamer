@@ -18,24 +18,26 @@
 namespace iqurius {
 
 class AudioChannel;
+class AudioBuffer;
 class SoundFragment {
 public:
-	~SoundFragment();
+	virtual ~SoundFragment();
 
-	const uint8_t* getBuffer() const { return samples_; }
-	size_t getBufferSize() const { return num_samples_ * channels_ * 2; }
-	uint8_t getChannels() const { return channels_; }
-
-	void playFragment(AudioChannel* audio_channel);
+	virtual const uint8_t* getBuffer() const { return sample_buffer_; }
+	virtual size_t getBufferSize() const = 0;
+	virtual uint8_t getChannels() const = 0;
+	virtual void playFragment(AudioChannel* audio_channel) = 0;
+	void cancelPlayback() { cancel_playback_ = true; }
 
 	static SoundFragment* fromVorbisFile(const char* path);
-private:
-	SoundFragment(size_t num_samples, uint8_t num_channels);
 
-	size_t num_samples_;
-	uint8_t* samples_;
-	uint8_t channels_;
-	uint8_t* conversion_buffer_;
+protected:
+	SoundFragment() : sample_buffer_(nullptr), cancel_playback_(false) {}
+	AudioBuffer* waitForFreeBuffer(AudioChannel* audio_channel);
+
+	uint8_t* sample_buffer_;
+	bool cancel_playback_;
+private:
 	DISALLOW_COPY_AND_ASSIGN(SoundFragment);
 };
 

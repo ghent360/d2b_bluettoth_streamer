@@ -549,10 +549,11 @@ int main(int argc, char *argv[]) {
 			"/home/vne/workspace/bt-audio/sounds/Update completed.ogg");
 	iqurius::MixerThread mt;
 	mt.start();
+	usleep(10000);
 	for(int i=0; i < 5; ++i) {
 		sf->playFragment(&mt.getAudioChannel());
 	}
-	sleep(5);
+	sleep(1);
 	mt.stop();
 	delete sf;
 	LOG(INFO) << "Exiting audio daemon";

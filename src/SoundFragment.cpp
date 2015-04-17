@@ -19,18 +19,48 @@
 
 namespace iqurius {
 
-SoundFragment::SoundFragment(size_t num_samples, uint8_t num_channels) {
+class MonoSoundFragment : public SoundFragment {
+public:
+	MonoSoundFragment(size_t num_samples);
+	virtual ~MonoSoundFragment();
+
+	virtual size_t getBufferSize() const { return num_samples_ * 2; }
+	virtual uint8_t getChannels() const { return 1; }
+	virtual void playFragment(AudioChannel* audio_channel);
+private:
+	size_t num_samples_;
+	uint8_t* conversion_buffer_;
+	DISALLOW_COPY_AND_ASSIGN(MonoSoundFragment);
+};
+
+class StereoSoundFragment : public SoundFragment {
+public:
+	StereoSoundFragment(size_t num_samples);
+
+	virtual size_t getBufferSize() const { return num_samples_ * 4; }
+	virtual uint8_t getChannels() const { return 2; }
+	virtual void playFragment(AudioChannel* audio_channel);
+private:
+	size_t num_samples_;
+	DISALLOW_COPY_AND_ASSIGN(StereoSoundFragment);
+};
+
+MonoSoundFragment::MonoSoundFragment(size_t num_samples) {
   num_samples_ = num_samples;
-  samples_ = new uint8_t[num_samples * num_channels * 2];
-  channels_ = num_channels;
-  conversion_buffer_ = nullptr;
-  if (channels_ == 1) {
-    conversion_buffer_ = new uint8_t[MixerThread::AUDIO_BUFFER_SIZE * 4];
-  }
+  sample_buffer_ = new uint8_t[num_samples * 2];
+  conversion_buffer_ = new uint8_t[MixerThread::AUDIO_BUFFER_SIZE * 4];
+}
+
+StereoSoundFragment::StereoSoundFragment(size_t num_samples) {
+  num_samples_ = num_samples;
+  sample_buffer_ = new uint8_t[num_samples * 4];
 }
 
 SoundFragment::~SoundFragment() {
-  delete [] samples_;
+  delete [] sample_buffer_;
+}
+
+MonoSoundFragment::~MonoSoundFragment() {
   delete [] conversion_buffer_;
 }
 
@@ -52,8 +82,13 @@ SoundFragment* SoundFragment::fromVorbisFile(const char* path) {
   CHECK(vi->rate == 44100);
   CHECK(vi->channels <= 2);
   num_samples = ov_pcm_total(&vf, -1);
-  result = new SoundFragment(num_samples, vi->channels);
-  buffer = (char*)result->samples_;
+  if (vi->channels == 1) {
+	  result = new MonoSoundFragment(num_samples);
+  } else {
+	  result = new StereoSoundFragment(num_samples);
+  }
+
+  buffer = (char*)result->sample_buffer_;
   buffer_len = (int)result->getBufferSize();
   while (buffer_len > 0) {
 	len = ov_read(&vf, buffer, buffer_len, 0, 2, 1, &current_section);
@@ -71,38 +106,66 @@ exit:
   return result;
 }
 
-void SoundFragment::playFragment(AudioChannel* audio_channel) {
-  const size_t frame_size = getChannels() * 2;
+AudioBuffer* SoundFragment::waitForFreeBuffer(AudioChannel* audio_channel) {
+  AudioBuffer* audio_buffer;
+
+  do {
+	audio_buffer = audio_channel->getFreeBuffer();
+	if (audio_buffer) {
+		return audio_buffer;
+	}
+    usleep(10000);
+  } while (!cancel_playback_);
+  return nullptr;
+}
+
+void MonoSoundFragment::playFragment(AudioChannel* audio_channel) {
+  const size_t frame_size = 2;
   const uint8_t* fragment_buffer = getBuffer();
-  size_t buffer_len_frames = getBufferSize() / frame_size;
+  size_t fragment_len = getBufferSize() / frame_size;
 
-  while (buffer_len_frames > 0) {
-    iqurius::AudioBuffer* audio_buffer = audio_channel->getFreeBuffer();
+  while (fragment_len > 0) {
+    AudioBuffer* audio_buffer = waitForFreeBuffer(audio_channel);
     if (nullptr == audio_buffer) {
-      usleep(10000);
-   	  continue;
+      break;
     }
-    size_t buffer_size_frames = audio_buffer->getSize() / 4;
 
-    if (buffer_len_frames < buffer_size_frames) {
-  	  buffer_size_frames = buffer_len_frames;
+    size_t buffer_len = audio_buffer->getSize() / 4;
+    if (fragment_len < buffer_len) {
+  	  buffer_len = fragment_len;
     }
-    if (channels_ == 2) {
-  	  audio_buffer->write(fragment_buffer, buffer_size_frames * 4);
-   	  fragment_buffer += buffer_size_frames * 4;
-    } else {
-   	  CHECK(buffer_size_frames <= MixerThread::AUDIO_BUFFER_SIZE);
-      for (int idx = 0; idx < buffer_size_frames; ++idx) {
-       	conversion_buffer_[idx*4] = fragment_buffer[idx*2];
-        conversion_buffer_[idx*4 + 1] = fragment_buffer[idx*2 + 1];
-        conversion_buffer_[idx*4 + 2] = fragment_buffer[idx*2];
-        conversion_buffer_[idx*4 + 3] = fragment_buffer[idx*2 + 1];
-      }
-      audio_buffer->write(conversion_buffer_, buffer_size_frames * 4);
-      fragment_buffer += buffer_size_frames * 2;
+    CHECK(buffer_len <= MixerThread::AUDIO_BUFFER_SIZE / 4);
+    for (int idx = 0; idx < buffer_len; ++idx) {
+      conversion_buffer_[idx*4] = fragment_buffer[idx*2];
+      conversion_buffer_[idx*4 + 1] = fragment_buffer[idx*2 + 1];
+      conversion_buffer_[idx*4 + 2] = fragment_buffer[idx*2];
+      conversion_buffer_[idx*4 + 3] = fragment_buffer[idx*2 + 1];
     }
-	buffer_len_frames -= buffer_size_frames;
+    audio_buffer->write(conversion_buffer_, buffer_len * 4);
 	audio_channel->postBuffer(audio_buffer);
+    fragment_buffer += buffer_len * 2;
+	fragment_len -= buffer_len;
+  }
+}
+
+void StereoSoundFragment::playFragment(AudioChannel* audio_channel) {
+  const size_t frame_size = 4;
+  const uint8_t* fragment_buffer = getBuffer();
+  size_t frafment_len = getBufferSize() / frame_size;
+
+  while (frafment_len > 0) {
+    AudioBuffer* audio_buffer = waitForFreeBuffer(audio_channel);
+    if (nullptr == audio_buffer) {
+      break;
+    }
+    size_t buffer_len = audio_buffer->getSize() / 4;
+    if (frafment_len < buffer_len) {
+  	  buffer_len = frafment_len;
+    }
+  	audio_buffer->write(fragment_buffer, buffer_len * 4);
+	audio_channel->postBuffer(audio_buffer);
+ 	fragment_buffer += buffer_len * 4;
+	frafment_len -= buffer_len;
   }
 }
 
