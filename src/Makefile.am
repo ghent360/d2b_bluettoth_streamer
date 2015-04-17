@@ -29,6 +29,8 @@ bt_a2dp_SOURCES =               \
     ../include/PlaybackThread.h        \
     MixerThread.cpp          \
     ../include/MixerThread.h        \
+    SoundFragment.cpp          \
+    ../include/SoundFragment.h        \
     BluezManager.cpp            \
     ../include/BluezManager.h          \
     MediaTransport.cpp	        \
@@ -75,4 +77,4 @@ bt_a2dp_CXXFLAGS = --std=c++11
 bt_a2dp_LDADD =  $(libglog_LIBS) $(dbus_LIBS) \
     $(top_builddir)/sbc/libsbc.la \
     $(top_builddir)/googleapis/base/libgoogleapis.la \
-    -lgflags -lasound -lpthread -lgcrypt -llzo2
+    -lgflags -lasound -lpthread -lgcrypt -llzo2 -lvorbisfile

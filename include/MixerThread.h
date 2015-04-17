@@ -63,7 +63,7 @@ public:
 	AudioBuffer(size_t size) : size_(size), data_len_(0) {
 		buffer_ = new uint8_t[size];
 	}
-	~AudioBuffer() { delete [] buffer_; }
+	virtual ~AudioBuffer() { delete [] buffer_; }
 
 	void reset() { data_len_ = 0; }
 
@@ -71,7 +71,7 @@ public:
 	size_t getDataLen() const { return data_len_; }
 	const uint8_t* getData() const { return buffer_; }
 
-	size_t write(uint8_t* data, size_t len) {
+	size_t write(const uint8_t* data, size_t len) {
 		if (len > size_ - data_len_) {
 			len = size_ - data_len_;
 		}
@@ -125,6 +125,7 @@ public:
 		LOG(ERROR) << "Attempting to return a null buffer.";
 		return;
 	  }
+	  audio_buffer->reset();
 	  if (!free_audio_buffers_.enqueue(audio_buffer)) {
 		LOG(ERROR) << "Unable to return buffer (channel mismatch?).";
 	  }

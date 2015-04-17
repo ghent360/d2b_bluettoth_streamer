@@ -26,6 +26,7 @@
 #include "ObjectPath.h"
 #include "SbcDecodeThread.h"
 #include "SbcMediaEndpoint.h"
+#include "SoundFragment.h"
 #include "time_util.h"
 
 #include <dbus/dbus.h>
@@ -544,12 +545,16 @@ int main(int argc, char *argv[]) {
 	}
 	app.mainLoop();
 	*/
+	iqurius::SoundFragment* sf = iqurius::SoundFragment::fromVorbisFile(
+			"/home/vne/workspace/bt-audio/sounds/Update completed.ogg");
 	iqurius::MixerThread mt;
-	for (int i = 0; i < 20; ++i) {
-		mt.start();
-		sleep(2);
-		mt.stop();
+	mt.start();
+	for(int i=0; i < 5; ++i) {
+		sf->playFragment(&mt.getAudioChannel());
 	}
+	sleep(5);
+	mt.stop();
+	delete sf;
 	LOG(INFO) << "Exiting audio daemon";
 	return 0;
 }

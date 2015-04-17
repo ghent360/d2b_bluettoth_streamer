@@ -24,6 +24,7 @@ AC_CHECK_LIB([asound], [snd_pcm_close])
 AC_CHECK_LIB([pthread], [pthread_create])
 AC_CHECK_LIB([gcrypt], [gcry_md_open])
 AC_CHECK_LIB([lzo2], [__lzo_init_v2])
+AC_CHECK_LIB([vorbisfile], [ov_fopen ov_info])
 
 # Checks for header files.
 AC_CHECK_HEADERS([float.h limits.h malloc.h stddef.h stdint.h stdlib.h string.h sys/time.h unistd.h fcntl.h gcrypt.h sys/mount.h lzo/lzo1x.h])
