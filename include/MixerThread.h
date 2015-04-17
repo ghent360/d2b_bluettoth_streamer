@@ -81,6 +81,9 @@ public:
 		}
 		return len;
 	}
+protected:
+	uint8_t* getData() { return buffer_; }
+	void setDataSize(size_t data_len) { data_len_ = data_len; }
 
 private:
 	const size_t size_;
@@ -92,9 +95,9 @@ private:
 
 class AudioChannel {
 public:
-	AudioChannel() {
+	AudioChannel(size_t audio_buffer_size) {
 	  for (size_t idx = 0; idx < NUM_AUDIO_BUFFERS; ++idx) {
-		AudioBuffer* audio_buffer = new AudioBuffer(AUDIO_BUFFER_SIZE);
+		AudioBuffer* audio_buffer = new AudioBuffer(audio_buffer_size);
 		free_audio_buffers_.enqueue(audio_buffer);
 	  }
 	}
@@ -143,7 +146,6 @@ public:
 
 private:
 	static constexpr size_t NUM_AUDIO_BUFFERS = 10;
-	static constexpr size_t AUDIO_BUFFER_SIZE = 4*441;  // 100ms
 
 	FFRingBuffer<AudioBuffer, NUM_AUDIO_BUFFERS> free_audio_buffers_;
 	FFRingBuffer<AudioBuffer, NUM_AUDIO_BUFFERS> audio_buffers_;
@@ -162,10 +164,13 @@ public:
 
 	AudioChannel& getAudioChannel() { return channel_; }
 
+	static constexpr size_t AUDIO_BUFFER_SIZE = 4*441;  // 100ms
 protected:
 	void playPcm(const uint8_t* buffer, size_t size);
 
 private:
+	static const AudioBuffer* SILENCE;
+
 	static void* threadProc(void *);
 	void run();
 

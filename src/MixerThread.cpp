@@ -16,10 +16,24 @@
 
 namespace iqurius {
 
+class SilenceAudioBuffer : public AudioBuffer {
+public:
+	SilenceAudioBuffer(size_t size) : AudioBuffer(size) {
+		memset(getData(), 0, size);
+		setDataSize(size);
+	}
+private:
+	DISALLOW_COPY_AND_ASSIGN(SilenceAudioBuffer);
+};
+
+static const SilenceAudioBuffer SILENCE_BUFFER(MixerThread::AUDIO_BUFFER_SIZE);
+const AudioBuffer* MixerThread::SILENCE = &SILENCE_BUFFER;
+
 MixerThread::MixerThread()
     : running_(false),
 	  signal_stop_(false),
 	  thread_(),
+	  channel_(AUDIO_BUFFER_SIZE),
 	  pcm_handle_(NULL) {
 }
 
@@ -67,10 +81,9 @@ void* MixerThread::threadProc(void *ctx) {
 void MixerThread::run() {
     while(!signal_stop_) {
     	AudioBuffer* buffer = channel_.pullBuffer();
-    	if (buffer == nullptr) {
-    		sleep(0);
-    	} else {
-			playPcm(buffer->getData(), buffer->getDataLen());
+    	const AudioBuffer* play_buffer = buffer ? buffer : SILENCE;
+    	playPcm(play_buffer->getData(), play_buffer->getDataLen());
+    	if (buffer) {
 			channel_.releaseBuffer(buffer);
     	}
     }
