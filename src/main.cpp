@@ -126,6 +126,7 @@ public:
 		  ping_proc_token_(0),
 		  reconnect_token_(0),
 		  update_checker_token_(0),
+		  mixer_(2),
 		  command_parser_(FLAGS_command_file) {
 	}
 
@@ -249,7 +250,8 @@ public:
 		stopPlayback();
 		if (media_endpoint_) {
 			playback_thread_ = new dbus::SbcDecodeThread(&conn_,
-					media_endpoint_->getTransportPath());
+					media_endpoint_->getTransportPath(),
+					mixer_.getAudioChannel(0));
 			playback_thread_->start();
 			LOG(INFO) << "Started playback thread.";
 		}
@@ -474,6 +476,7 @@ public:
 	}
 
 	void mainLoop() {
+		mixer_.start();
 		command_parser_.setCommandCllaback(
 				googleapis::NewPermanentCallback(this,
 						&Application::onCommand));
@@ -502,6 +505,7 @@ public:
 		} while (true);
 		adapter_media_interface_->unregisterEndpoint(*media_endpoint_);
 		delete adapter_media_interface_;
+		mixer_.stop();
 	}
 private:
 	static const uint32_t RECONNECT_TIME = 20000;
@@ -523,6 +527,7 @@ private:
 	uint32_t reconnect_token_;
 	uint32_t update_checker_token_;
 	iqurius::FirmwareUpdater updater_;
+	iqurius::AudioMixer mixer_;
 	std::list<MyAudioSource*> audio_sources_;
 	CommandParser command_parser_;
 };
@@ -603,15 +608,13 @@ int main(int argc, char *argv[]) {
 		LOG(ERROR) << "Error initializing the LZO library";
 		return 1;
 	}
-	testAudioMix();
-	/*
+	//testAudioMix();
 	Application app;
 	if (app.connectBus()) {
 		LOG(ERROR) << "Can't connect to the system D-Bus.";
 		return 2;
 	}
 	app.mainLoop();
-	*/
 	LOG(INFO) << "Exiting audio daemon";
 	return 0;
 }

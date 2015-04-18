@@ -18,7 +18,9 @@ namespace dbus {
 
 class SbcDecodeThread : public PlaybackThread {
 public:
-	SbcDecodeThread(Connection* connection, const ObjectPath& path);
+	SbcDecodeThread(Connection* connection,
+			const ObjectPath& path,
+			iqurius::AudioChannel* audio_channel);
 	virtual ~SbcDecodeThread();
 
 	virtual void decode(const uint8_t* buffer, size_t size);
