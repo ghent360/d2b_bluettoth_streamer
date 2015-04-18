@@ -29,6 +29,19 @@ private:
 static const SilenceAudioBuffer SILENCE_BUFFER(MixerThread::AUDIO_BUFFER_SIZE);
 const AudioBuffer* MixerThread::SILENCE = &SILENCE_BUFFER;
 
+int16_t AudioChannel::setVolume(int16_t value) {
+  int16_t old_volume = volume_;
+  if (value >= 0) {
+	volume_ = value;
+  }
+  return old_volume;
+}
+
+float AudioChannel::setVolume(float value) {
+  int16_t old_volume = setVolume((int16_t)(value * 0x7fff));
+  return ((double)old_volume) / (double)0x7fff;
+}
+
 MixerThread::MixerThread(size_t num_channels)
     : running_(false),
 	  signal_stop_(false),
@@ -121,9 +134,9 @@ void MixerThread::run() {
   while(!signal_stop_) {
 	size_t num_mix_channels = 0;
 	for (size_t idx = 0; idx < num_channels_; ++idx) {
+   	  mix_channel_owner[num_mix_channels] = channels_[idx];
       mix_list[num_mix_channels] = channels_[idx]->pullBuffer();
       if (mix_list[num_mix_channels]) {
-    	mix_channel_owner[num_mix_channels] = channels_[idx];
     	num_mix_channels++;
       }
 	}
@@ -139,8 +152,11 @@ void MixerThread::run() {
         for (int buffer_idx = 0; buffer_idx < num_mix_channels; ++buffer_idx) {
           int16_t* buffer_samples = (int16_t *)mix_list[buffer_idx]->getData();
           size_t buffer_len = mix_list[buffer_idx]->getDataLen() / 2;
-          if (buffer_len < sample_no) {
-        	sample += buffer_samples[sample_no];
+          int16_t channel_volume = mix_channel_owner[buffer_idx]->getVolume();
+
+          if (sample_no < buffer_len) {
+        	sample += ((int32_t)buffer_samples[sample_no] * channel_volume)
+        			/ 0x7fff;
           }
         }
         if (sample > 0x7fff) {

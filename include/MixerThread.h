@@ -95,16 +95,21 @@ private:
 
 class AudioChannel {
 public:
-	AudioChannel(size_t audio_buffer_size) {
+	AudioChannel(size_t audio_buffer_size) : volume_(0x7fff) {
 	  for (size_t idx = 0; idx < NUM_AUDIO_BUFFERS; ++idx) {
 		AudioBuffer* audio_buffer = new AudioBuffer(audio_buffer_size);
 		free_audio_buffers_.enqueue(audio_buffer);
 	  }
 	}
+
 	~AudioChannel() {
 	  size_t num_buffers = 0;
 	  AudioBuffer* audio_buffer = nullptr;
 	  while (free_audio_buffers_.dequeue(&audio_buffer)) {
+		  delete audio_buffer;
+		  num_buffers++;
+	  }
+	  while (audio_buffers_.dequeue(&audio_buffer)) {
 		  delete audio_buffer;
 		  num_buffers++;
 	  }
@@ -137,6 +142,10 @@ public:
       return audio_buffer;
 	}
 
+	int16_t getVolume() const { return volume_; }
+	int16_t setVolume(int16_t value);
+	float setVolume(float value);
+
 	bool postBuffer(AudioBuffer* audio_buffer) {
 	  if (audio_buffer == nullptr) {
 		LOG(ERROR) << "Attempting to post a null buffer.";
@@ -150,6 +159,7 @@ private:
 
 	FFRingBuffer<AudioBuffer, NUM_AUDIO_BUFFERS> free_audio_buffers_;
 	FFRingBuffer<AudioBuffer, NUM_AUDIO_BUFFERS> audio_buffers_;
+	int16_t volume_;
 	DISALLOW_COPY_AND_ASSIGN(AudioChannel);
 };
 
