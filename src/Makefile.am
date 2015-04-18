@@ -69,6 +69,7 @@ bt_a2dp_CPPFLAGS = \
     -I$(top_srcdir)/include \
     -I$(top_srcdir)/sbc \
     -I$(top_srcdir) \
+    -DDATADIR='"$(datadir)/@PACKAGE@"' \
     $(dbus_CFLAGS) \
     $(libglog_CFLAGS) 
 
