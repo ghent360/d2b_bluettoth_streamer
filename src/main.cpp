@@ -531,12 +531,14 @@ struct ctx {
 	iqurius::SoundFragment* sf;
 	iqurius::AudioChannel* ac;
 	int num_loops;
+	int sleep;
 };
 
 void *playFragment(void* arg) {
 	ctx* p_ctx = (ctx*)arg;
 	for (int i = 0; i < p_ctx->num_loops; ++i) {
 		p_ctx->sf->playFragment(p_ctx->ac);
+		sleep(p_ctx->sleep);
 	}
     return NULL;
 }
@@ -554,9 +556,9 @@ void testAudioMix() {
 			"/home/vne/workspace/bt-audio/sounds/Update is available.ogg");
 
 	iqurius::MixerThread mt(3);
-	mt.getAudioChannel(0)->setVolume(0.5f);
-	mt.getAudioChannel(1)->setVolume(0.5f);
-	mt.getAudioChannel(2)->setVolume(0.5f);
+	//mt.getAudioChannel(0)->setVolume(0.3f);
+	//mt.getAudioChannel(1)->setVolume(0.3f);
+	//mt.getAudioChannel(2)->setVolume(0.3f);
 	mt.start();
 	usleep(10000);
 
@@ -573,6 +575,9 @@ void testAudioMix() {
 	c1.num_loops = 3;
 	c2.num_loops = 3;
 	c3.num_loops = 5;
+	c1.sleep = 2;
+	c2.sleep = 5;
+	c3.sleep = 3;
 
 	pthread_create(&t1, NULL, playFragment, &c1);
 	pthread_create(&t2, NULL, playFragment, &c2);

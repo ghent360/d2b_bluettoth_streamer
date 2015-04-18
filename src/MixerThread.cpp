@@ -130,6 +130,7 @@ void MixerThread::run() {
   AudioChannel** mix_channel_owner = new AudioChannel*[num_channels_];
   AudioBuffer mix_buffer(AUDIO_BUFFER_SIZE);
   constexpr size_t mix_buffer_len = AUDIO_BUFFER_SIZE / 2;
+  mix_buffer.setDataSize(mix_buffer_len * 2);
 
   while(!signal_stop_) {
 	size_t num_mix_channels = 0;
@@ -144,7 +145,21 @@ void MixerThread::run() {
 	if (num_mix_channels == 0) {
 	  play_buffer = SILENCE;
 	} else if (num_mix_channels == 1) {
-	  play_buffer = mix_list[0];
+	  int16_t* mixed_samples = (int16_t *)mix_buffer.getData();
+      int16_t* buffer_samples = (int16_t *)mix_list[0]->getData();
+	  size_t buffer_len = mix_list[0]->getDataLen() / 2;
+	  int16_t channel_volume = mix_channel_owner[0]->getVolume();
+	  int sample_no;
+
+	  for (sample_no = 0; sample_no < buffer_len; ++sample_no) {
+		int32_t sample = ((int32_t)buffer_samples[sample_no] * channel_volume)
+			/ 0x7fff;
+		mixed_samples[sample_no] = (int16_t)sample;
+	  }
+	  for (; sample_no < mix_buffer_len; ++sample_no) {
+		mixed_samples[sample_no] = 0;
+	  }
+	  play_buffer = &mix_buffer;
 	} else {
 	  int16_t* mixed_samples = (int16_t *)mix_buffer.getData();
 	  for (int sample_no = 0; sample_no < mix_buffer_len; ++sample_no) {
@@ -166,7 +181,6 @@ void MixerThread::run() {
         }
         mixed_samples[sample_no] = (int16_t)sample;
 	  }
-	  mix_buffer.setDataSize(mix_buffer_len * 2);
 	  play_buffer = &mix_buffer;
 	}
    	playPcm(play_buffer->getData(), play_buffer->getDataLen());
@@ -193,9 +207,6 @@ void MixerThread::playPcm(const uint8_t* buffer, size_t size) {
 	if (frames < 0) {
 	  LOG (ERROR) << "snd_pcm_writei failed: " << snd_strerror(frames);
 	  break;
-	}
-	if (frames > 0 && frames < (long)sizeof(buffer)) {
-	  LOG(INFO) << "Short write (expected " << size << ", wrote " << frames << ")";
 	}
 	size -= frames;
   }
