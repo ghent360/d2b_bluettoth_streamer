@@ -8,7 +8,6 @@
  * All rights reserved.
  */
 
-
 #include "AudioMixer.h"
 #include "AacMediaEndpoint.h"
 #include "AudioSource.h"

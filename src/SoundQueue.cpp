@@ -63,10 +63,13 @@ void SoundQueue::run() {
 	  delete current_fragment_;
 	  current_fragment_ = next_fragment;
 	  replay_ = true;
+    } else {
+      usleep(100000);
     }
     if (replay_) {
       if (current_fragment_) {
     	current_fragment_->playFragment(audio_channel_);
+    	sleep(2);  // pause after each message
       }
       replay_ = false;
     }
