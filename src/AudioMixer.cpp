@@ -8,10 +8,10 @@
  *  All rights reserved.
  */
 
-#include <AudioMixer.h>
+#include "AudioMixer.h"
+
 #include <glog/logging.h>
-#include <sys/select.h>
-#include <unistd.h>
+#include <sched.h>
 
 namespace iqurius {
 
@@ -87,7 +87,7 @@ void AudioMixer::stop() {
 
 void AudioMixer::start() {
   if (running_) {
-    LOG(WARNING) << "Playback thread already running.";
+    LOG(WARNING) << "AudioMixer thread already running.";
     return;
   }
   if (pcm_handle_) {
@@ -120,6 +120,12 @@ void AudioMixer::start() {
 
 void* AudioMixer::threadProc(void *ctx) {
   AudioMixer* pThis = reinterpret_cast<AudioMixer*>(ctx);
+  struct sched_param proprity;
+  proprity.__sched_priority = 99;
+  if (sched_setscheduler(0, SCHED_RR, &proprity) < 0) {
+	LOG(ERROR) << "Unable to set the audio mixer priority " << errno;
+  }
+
   pThis->run();
   return NULL;
 }

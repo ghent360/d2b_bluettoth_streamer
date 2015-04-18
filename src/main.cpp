@@ -27,6 +27,7 @@
 #include "SbcDecodeThread.h"
 #include "SbcMediaEndpoint.h"
 #include "SoundFragment.h"
+#include "SoundQueue.h"
 #include "time_util.h"
 
 #include <dbus/dbus.h>
@@ -127,6 +128,7 @@ public:
 		  reconnect_token_(0),
 		  update_checker_token_(0),
 		  mixer_(2),
+		  sound_queue_(mixer_.getAudioChannel(1)),
 		  command_parser_(FLAGS_command_file) {
 	}
 
@@ -477,6 +479,7 @@ public:
 
 	void mainLoop() {
 		mixer_.start();
+		sound_queue_.start();
 		command_parser_.setCommandCllaback(
 				googleapis::NewPermanentCallback(this,
 						&Application::onCommand));
@@ -505,6 +508,7 @@ public:
 		} while (true);
 		adapter_media_interface_->unregisterEndpoint(*media_endpoint_);
 		delete adapter_media_interface_;
+		sound_queue_.stop();
 		mixer_.stop();
 	}
 private:
@@ -528,6 +532,7 @@ private:
 	uint32_t update_checker_token_;
 	iqurius::FirmwareUpdater updater_;
 	iqurius::AudioMixer mixer_;
+	iqurius::SoundQueue sound_queue_;
 	std::list<MyAudioSource*> audio_sources_;
 	CommandParser command_parser_;
 };

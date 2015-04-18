@@ -8,11 +8,10 @@
  *  All rights reserved.
  */
 
-#include <AudioMixer.h>
 #include "SoundFragment.h"
+#include "AudioMixer.h"
+
 #include <glog/logging.h>
-#include <sys/select.h>
-#include <unistd.h>
 #include <vorbis/codec.h>
 #include <vorbis/vorbisfile.h>
 

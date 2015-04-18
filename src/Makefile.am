@@ -31,6 +31,8 @@ bt_a2dp_SOURCES =               \
     ../include/AudioMixer.h        \
     SoundFragment.cpp          \
     ../include/SoundFragment.h        \
+    SoundQueue.cpp          \
+    ../include/SoundQueue.h        \
     BluezManager.cpp            \
     ../include/BluezManager.h          \
     MediaTransport.cpp	        \
