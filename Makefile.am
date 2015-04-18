@@ -15,6 +15,10 @@ dist_pkgdata_DATA = \
    sounds/Update_is_available.ogg          \
    sounds/Updating2.ogg                    \
    sounds/Ready_to_pair2.ogg               \
-   sounds/Restarting.ogg
+   sounds/Restarting.ogg                   \
+   sounds/Correct.ogg                      \
+   sounds/Disabled.ogg                     \
+   sounds/Incorrect.ogg                    \
+   sounds/Sonar.ogg
 
 EXTRA_DIST = a2dp.service a2dp.target
