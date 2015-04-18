@@ -280,6 +280,8 @@ public:
 	    	}
 	    	stopDiscoverable();
 	    	command_parser_.sendStatus("@&CONN\n");
+			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+					iqurius::SoundManager::SOUND_CORRECT));
 	    	break;
 
 	    case dbus::AudioSource::State::DISCONNECTED:
@@ -289,6 +291,8 @@ public:
 	    		stopPlayback();
 	    	}
 	    	command_parser_.sendStatus("@&DISC\n");
+			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+					iqurius::SoundManager::SOUND_INCORRECT));
 	    	break;
 
 	    case dbus::AudioSource::State::CONNECTING:
@@ -348,6 +352,8 @@ public:
 		if (audio_src == NULL) {
 			audio_src = createAudioSource(device_path);
 			audio_src->connectAsync();
+			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+					iqurius::SoundManager::SOUND_CORRECT));
 		}
 	}
 
@@ -384,13 +390,14 @@ public:
 							dbus::AudioTargetControl::BUTTON_ID_PREV);
 				}
 			}
+		} else {
+			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+					iqurius::SoundManager::SOUND_DISABLED));
 		}
 	}
 
 	void sendPing() {
 		command_parser_.sendStatus("@&PING\n");
-		sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
-				iqurius::SoundManager::SOUND_DISABLED));
 	}
 
 	void tryReconnect() {
@@ -410,6 +417,10 @@ public:
 	void checkForUpdates() {
 		if (updater_.checkUpdateAvailable()) {
 			LOG(INFO) << "Found firmware update";
+			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+					iqurius::SoundManager::SOUND_UPDATE_IS_AVAILABLE));
+			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+					iqurius::SoundManager::SOUND_ENTER_CODE_522));
 		}
 	}
 
@@ -427,6 +438,8 @@ public:
 
 		dbus::ObjectPath adapter_path;
 		if (!getAdapterPath("", &adapter_path)) {
+			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+					iqurius::SoundManager::SOUND_UNABLE_TO_CONNECT_TO_BLUETOOTH_ADAPTER));
 			return;
 		}
 		adapter_ = new dbus::BluezAdapter(&conn_, adapter_path);
@@ -442,7 +455,7 @@ public:
 		adapter_->setDeviceCreatedCallback(
 			googleapis::NewPermanentCallback(this,
 				&Application::onDeviceCreated));
-		adapter_->setName("iQurius JSync");
+		adapter_->setName("iQurius JSync-dev");
 
 		media_endpoint_ = new dbus::SbcMediaEndpoint();
 		//media_endpoint_ = new dbus::AacMediaEndpoint();
@@ -458,6 +471,8 @@ public:
 			agent_ = NULL;
 			adapter_media_interface_ = NULL;
 			media_endpoint_ = NULL;
+			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+					iqurius::SoundManager::SOUND_UNABLE_TO_CONNECT_TO_BLUETOOTH_ADAPTER));
 			return;
 		}
 		conn_.addObject(media_endpoint_);
@@ -465,6 +480,8 @@ public:
 		enumerateBluetoothDevices();
 		if (audio_sources_.empty()) {
 			startDiscoverable();
+			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+					iqurius::SoundManager::SOUND_READY_TO_PAIR));
 		}
 
 		if (FLAGS_autoconnect && !reconnect_token_) {
