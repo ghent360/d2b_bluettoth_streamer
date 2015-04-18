@@ -104,16 +104,13 @@ void PlaybackThread::run() {
 }
 
 iqurius::AudioBuffer* PlaybackThread::waitForFreeBuffer() {
-	iqurius::AudioBuffer* audio_buffer;
-
+  iqurius::AudioBuffer* audio_buffer;
   do {
 	audio_buffer = audio_channel_->getFreeBuffer();
-	if (audio_buffer) {
-		return audio_buffer;
-	}
-    usleep(1000);
+	if (audio_buffer) break;
+	usleep(1000);
   } while (!signal_stop_);
-  return nullptr;
+  return audio_buffer;
 }
 
 void PlaybackThread::playPcm(const uint8_t* buffer, size_t size) {

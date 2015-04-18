@@ -30,15 +30,15 @@ const AudioBuffer* AudioMixer::SILENCE = &SILENCE_BUFFER;
 
 int16_t AudioChannel::setVolume(int16_t value) {
   int16_t old_volume = volume_;
-  if (value >= 0) {
+  if (value >= 0 && value <= 0x200) {
     volume_ = value;
   }
   return old_volume;
 }
 
 float AudioChannel::setVolume(float value) {
-  int16_t old_volume = setVolume((int16_t)(value * 0x7fff));
-  return ((double)old_volume) / (double)0x7fff;
+  int16_t old_volume = setVolume((int16_t)(value * 0x100));
+  return ((double)old_volume) / (double)0x100;
 }
 
 AudioMixer::AudioMixer(size_t num_channels)
@@ -168,7 +168,7 @@ void AudioMixer::run() {
       // Nothing to mix, just apply the volume correction
       for (sample_no = 0; sample_no < buffer_len; ++sample_no) {
         int32_t sample = ((int32_t)buffer_samples[sample_no] * channel_volume)
-            / 0x7fff;
+        		>> 8;
         mixed_samples[sample_no] = (int16_t)sample;
       }
       // Fill with silence, if needed
@@ -204,17 +204,14 @@ void AudioMixer::run() {
       // Mix up to the shortest channel
       for (sample_no = 0; sample_no < buffer_len1; ++sample_no) {
         int32_t sample;
-        sample = ((int32_t)buffer_samples1[sample_no] * channel_volume1)
-              / 0x7fff;
-        sample += ((int32_t)buffer_samples2[sample_no] * channel_volume2)
-              / 0x7fff;
+        sample = ((int32_t)buffer_samples1[sample_no] * channel_volume1) >> 8;
+        sample += ((int32_t)buffer_samples2[sample_no] * channel_volume2) >> 8;
         mixed_samples[sample_no] = clip(sample);
       }
       // Mix what is left from the longer channel
       for (; sample_no < buffer_len2; ++sample_no) {
         int32_t sample;
-        sample = ((int32_t)buffer_samples2[sample_no] * channel_volume2)
-              / 0x7fff;
+        sample = ((int32_t)buffer_samples2[sample_no] * channel_volume2) >> 8;
         mixed_samples[sample_no] = (int16_t)sample;
       }
       // Fill the rest with silence
@@ -233,7 +230,7 @@ void AudioMixer::run() {
 
           if (sample_no < buffer_len) {
             sample += ((int32_t)buffer_samples[sample_no] * channel_volume)
-              / 0x7fff;
+            		>> 8;
           }
         }
         mixed_samples[sample_no] = clip(sample);

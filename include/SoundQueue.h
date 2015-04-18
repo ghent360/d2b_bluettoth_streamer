@@ -22,8 +22,10 @@ namespace iqurius {
 class AudioChannel;
 class SoundQueue {
 public:
-	SoundQueue(AudioChannel* audio_channel)
-      : audio_channel_(audio_channel),
+	SoundQueue(AudioChannel* effect_audio_channel,
+			AudioChannel* music_audio_channel)
+      : effect_audio_channel_(effect_audio_channel),
+		music_audio_channel_(music_audio_channel),
 		replay_(false),
 		running_(false),
 		signal_stop_(false),
@@ -42,7 +44,8 @@ private:
 	void run();
 
 	std::list<std::string> scheduled_fragments_;
-	AudioChannel* audio_channel_;
+	AudioChannel* effect_audio_channel_;
+	AudioChannel* music_audio_channel_;
 	bool replay_;
 	bool running_;
 	bool signal_stop_;

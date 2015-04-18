@@ -17,6 +17,8 @@
 
 namespace iqurius {
 
+static constexpr size_t MAX_QUEUED_MESSAGES = 10;
+
 void SoundQueue::stop() {
   if (running_) {
     signal_stop_ = true;
@@ -62,8 +64,11 @@ void SoundQueue::run() {
     }
     if (replay_) {
       if (fragment) {
-    	fragment->playFragment(audio_channel_);
-    	sleep(2);  // pause after each message
+    	int16_t old_music_volume = music_audio_channel_->getVolume();
+    	music_audio_channel_->setVolume(0.3f);
+    	fragment->playFragment(effect_audio_channel_);
+    	music_audio_channel_->setVolume(old_music_volume);
+    	sleep(1);  // pause after each message
       }
       replay_ = false;
     }
@@ -73,7 +78,7 @@ void SoundQueue::run() {
 
 void SoundQueue::scheduleFragment(const char* path) {
   googleapis::MutexLock lock(&mutex_);
-  if (path) {
+  if (path && scheduled_fragments_.size() < MAX_QUEUED_MESSAGES) {
 	scheduled_fragments_.push_back(std::string(path));
   } else {
 	LOG(ERROR) << "Trying to schedule a null pointer fragment";

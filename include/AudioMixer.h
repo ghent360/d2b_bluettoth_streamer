@@ -95,7 +95,7 @@ private:
 
 class AudioChannel {
 public:
-	AudioChannel(size_t audio_buffer_size) : volume_(0x7fff) {
+	AudioChannel(size_t audio_buffer_size) : volume_(0x100) {
 	  for (size_t idx = 0; idx < NUM_AUDIO_BUFFERS; ++idx) {
 		AudioBuffer* audio_buffer = new AudioBuffer(audio_buffer_size);
 		free_audio_buffers_.enqueue(audio_buffer);

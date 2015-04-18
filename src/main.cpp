@@ -128,7 +128,7 @@ public:
 		  reconnect_token_(0),
 		  update_checker_token_(0),
 		  mixer_(2),
-		  sound_queue_(mixer_.getAudioChannel(1)),
+		  sound_queue_(mixer_.getAudioChannel(1), mixer_.getAudioChannel(0)),
 		  command_parser_(FLAGS_command_file) {
 	}
 
