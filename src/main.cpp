@@ -549,11 +549,11 @@ void testAudioMix() {
 	pthread_t t3;
 
 	iqurius::SoundFragment* sf1 = iqurius::SoundFragment::fromVorbisFile(
-			"/home/vne/workspace/bt-audio/sounds/Updating2.ogg");
+			DATADIR "/Updating2.ogg");
 	iqurius::SoundFragment* sf2 = iqurius::SoundFragment::fromVorbisFile(
-			"/home/vne/workspace/bt-audio/sounds/Updating3.ogg");
+			DATADIR "/Please_dont_turh_the_power.ogg");
 	iqurius::SoundFragment* sf3 = iqurius::SoundFragment::fromVorbisFile(
-			"/home/vne/workspace/bt-audio/sounds/Update is available.ogg");
+			DATADIR "/Update_is_available.ogg");
 
 	iqurius::MixerThread mt(3);
 	//mt.getAudioChannel(0)->setVolume(0.3f);
