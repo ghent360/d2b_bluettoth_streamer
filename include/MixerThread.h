@@ -69,7 +69,10 @@ public:
 
 	size_t getSize() const { return size_; }
 	size_t getDataLen() const { return data_len_; }
+
+	uint8_t* getData() { return buffer_; }
 	const uint8_t* getData() const { return buffer_; }
+	void setDataSize(size_t data_len) { data_len_ = data_len; }
 
 	size_t write(const uint8_t* data, size_t len) {
 		if (len > size_ - data_len_) {
@@ -81,9 +84,6 @@ public:
 		}
 		return len;
 	}
-protected:
-	uint8_t* getData() { return buffer_; }
-	void setDataSize(size_t data_len) { data_len_ = data_len; }
 
 private:
 	const size_t size_;
@@ -155,15 +155,13 @@ private:
 
 class MixerThread {
 public:
-	MixerThread();
-	virtual ~MixerThread() {
-		stop();
-	};
+	MixerThread(size_t num_channels);
+	virtual ~MixerThread();
 
 	void start();
 	void stop();
 
-	AudioChannel& getAudioChannel() { return channel_; }
+	AudioChannel* getAudioChannel(size_t channel_no);
 
 	static constexpr size_t AUDIO_BUFFER_SIZE = 4*441;  // 100ms
 protected:
@@ -179,7 +177,8 @@ private:
 	bool signal_stop_;
 	pthread_t thread_;
 
-	AudioChannel channel_;
+	size_t num_channels_;
+	AudioChannel** channels_;
 	snd_pcm_t *pcm_handle_;
 	DISALLOW_COPY_AND_ASSIGN(MixerThread);
 };

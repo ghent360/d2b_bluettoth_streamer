@@ -546,14 +546,14 @@ int main(int argc, char *argv[]) {
 	app.mainLoop();
 	*/
 	iqurius::SoundFragment* sf = iqurius::SoundFragment::fromVorbisFile(
-			"/home/vne/workspace/bt-audio/sounds/Update completed.ogg");
-	iqurius::MixerThread mt;
+			"/home/vne/workspace/bt-audio/sounds/Updating2.ogg");
+	iqurius::MixerThread mt(3);
 	mt.start();
 	usleep(10000);
-	for(int i=0; i < 5; ++i) {
-		sf->playFragment(&mt.getAudioChannel());
+	for(int i=0; i < 3; ++i) {
+		sf->playFragment(mt.getAudioChannel(i));
 	}
-	sleep(1);
+	sleep(2);
 	mt.stop();
 	delete sf;
 	LOG(INFO) << "Exiting audio daemon";
