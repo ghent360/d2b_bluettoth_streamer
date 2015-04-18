@@ -26,6 +26,7 @@
 #include "SbcDecodeThread.h"
 #include "SbcMediaEndpoint.h"
 #include "SoundFragment.h"
+#include "SoundManager.h"
 #include "SoundQueue.h"
 #include "time_util.h"
 
@@ -388,6 +389,8 @@ public:
 
 	void sendPing() {
 		command_parser_.sendStatus("@&PING\n");
+		sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+				iqurius::SoundManager::SOUND_DISABLED));
 	}
 
 	void tryReconnect() {
@@ -532,6 +535,7 @@ private:
 	iqurius::FirmwareUpdater updater_;
 	iqurius::AudioMixer mixer_;
 	iqurius::SoundQueue sound_queue_;
+	iqurius::SoundManager sound_manager_;
 	std::list<MyAudioSource*> audio_sources_;
 	CommandParser command_parser_;
 };

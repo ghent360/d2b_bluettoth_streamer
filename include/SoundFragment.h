@@ -13,8 +13,6 @@
 
 #include "util.h"
 
-#include <glog/logging.h>
-
 namespace iqurius {
 
 class AudioChannel;

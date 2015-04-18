@@ -166,7 +166,7 @@ private:
 class AudioMixer {
 public:
 	AudioMixer(size_t num_channels);
-	virtual ~AudioMixer();
+	~AudioMixer();
 
 	void start();
 	void stop();

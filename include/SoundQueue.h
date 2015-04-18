@@ -13,7 +13,6 @@
 
 #include "util.h"
 
-#include <glog/logging.h>
 #include <googleapis/base/mutex.h>
 #include <list>
 #include <pthread.h>
@@ -21,20 +20,20 @@
 namespace iqurius {
 
 class AudioChannel;
-class SoundFragment;
 class SoundQueue {
 public:
 	SoundQueue(AudioChannel* audio_channel)
-      : current_fragment_(nullptr),
-		audio_channel_(audio_channel),
+      : audio_channel_(audio_channel),
 		replay_(false),
 		running_(false),
 		signal_stop_(false),
 		thread_() {
 	}
-	virtual ~SoundQueue();
+	~SoundQueue() {
+	  stop();
+	}
 
-	void scheduleFragment(SoundFragment* fragment);
+	void scheduleFragment(const char* path);
 	void replay() { replay_ = true; }
 	void start();
 	void stop();
@@ -42,8 +41,7 @@ private:
 	static void* threadProc(void *);
 	void run();
 
-	std::list<SoundFragment*> scheduled_fragments_;
-	SoundFragment* current_fragment_;
+	std::list<std::string> scheduled_fragments_;
 	AudioChannel* audio_channel_;
 	bool replay_;
 	bool running_;

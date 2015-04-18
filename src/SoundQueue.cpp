@@ -17,13 +17,6 @@
 
 namespace iqurius {
 
-SoundQueue::~SoundQueue() {
-  stop();
-  for (auto* fragment : scheduled_fragments_) {
-	delete fragment;
-  }
-}
-
 void SoundQueue::stop() {
   if (running_) {
     signal_stop_ = true;
@@ -50,8 +43,9 @@ void* SoundQueue::threadProc(void *ctx) {
 }
 
 void SoundQueue::run() {
+  SoundFragment* fragment = nullptr;
   while (!signal_stop_) {
-	SoundFragment* next_fragment = nullptr;
+	std::string next_fragment;
 	{
 	  googleapis::MutexLock lock(&mutex_);
 	  if (scheduled_fragments_.size() > 0) {
@@ -59,27 +53,28 @@ void SoundQueue::run() {
 		scheduled_fragments_.pop_front();
 	  }
 	}
-    if (next_fragment) {
-	  delete current_fragment_;
-	  current_fragment_ = next_fragment;
-	  replay_ = true;
+    if (next_fragment.empty()) {
+        usleep(100000);
     } else {
-      usleep(100000);
+	  delete fragment;
+	  fragment = SoundFragment::fromVorbisFile(next_fragment.c_str());
+	  replay_ = true;
     }
     if (replay_) {
-      if (current_fragment_) {
-    	current_fragment_->playFragment(audio_channel_);
+      if (fragment) {
+    	fragment->playFragment(audio_channel_);
     	sleep(2);  // pause after each message
       }
       replay_ = false;
     }
   }
+  delete fragment;
 }
 
-void SoundQueue::scheduleFragment(SoundFragment* fragment) {
+void SoundQueue::scheduleFragment(const char* path) {
   googleapis::MutexLock lock(&mutex_);
-  if (fragment) {
-	scheduled_fragments_.push_back(fragment);
+  if (path) {
+	scheduled_fragments_.push_back(std::string(path));
   } else {
 	LOG(ERROR) << "Trying to schedule a null pointer fragment";
   }
