@@ -9,6 +9,7 @@
  */
 
 
+#include <AudioMixer.h>
 #include "AacMediaEndpoint.h"
 #include "AudioSource.h"
 #include "AudioTargetControl.h"
@@ -22,7 +23,6 @@
 #include "DelayedProcessing.h"
 #include "DictionaryHelper.h"
 #include "FirmwareUpdater.h"
-#include "MixerThread.h"
 #include "ObjectPath.h"
 #include "SbcDecodeThread.h"
 #include "SbcMediaEndpoint.h"
@@ -555,7 +555,7 @@ void testAudioMix() {
 	iqurius::SoundFragment* sf3 = iqurius::SoundFragment::fromVorbisFile(
 			DATADIR "/Update_is_available.ogg");
 
-	iqurius::MixerThread mt(3);
+	iqurius::AudioMixer mt(3);
 	//mt.getAudioChannel(0)->setVolume(0.3f);
 	//mt.getAudioChannel(1)->setVolume(0.3f);
 	//mt.getAudioChannel(2)->setVolume(0.3f);

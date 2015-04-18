@@ -1,5 +1,5 @@
 /*
- * MixerThread.h
+ * AudioMixer.h
  *
  *  Created on: Apr 14, 2015
  *      Author: Venelin Efremov
@@ -8,8 +8,8 @@
  *  All rights reserved.
  */
 
-#ifndef MIXERTHREAD_H_
-#define MIXERTHREAD_H_
+#ifndef AUDIOMIXER_H_
+#define AUDIOMIXER_H_
 
 #include "util.h"
 
@@ -163,10 +163,10 @@ private:
 	DISALLOW_COPY_AND_ASSIGN(AudioChannel);
 };
 
-class MixerThread {
+class AudioMixer {
 public:
-	MixerThread(size_t num_channels);
-	virtual ~MixerThread();
+	AudioMixer(size_t num_channels);
+	virtual ~AudioMixer();
 
 	void start();
 	void stop();
@@ -190,9 +190,9 @@ private:
 	size_t num_channels_;
 	AudioChannel** channels_;
 	snd_pcm_t *pcm_handle_;
-	DISALLOW_COPY_AND_ASSIGN(MixerThread);
+	DISALLOW_COPY_AND_ASSIGN(AudioMixer);
 };
 
 } /* namespace iqurius */
 
-#endif /* MIXERTHREAD_H_ */
+#endif /* AUDIOMIXER_H_ */

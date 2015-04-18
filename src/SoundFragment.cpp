@@ -8,9 +8,8 @@
  *  All rights reserved.
  */
 
+#include <AudioMixer.h>
 #include "SoundFragment.h"
-#include "MixerThread.h"
-
 #include <glog/logging.h>
 #include <sys/select.h>
 #include <unistd.h>
@@ -48,7 +47,7 @@ private:
 MonoSoundFragment::MonoSoundFragment(size_t num_samples) {
   num_samples_ = num_samples;
   sample_buffer_ = new uint8_t[num_samples * 2];
-  conversion_buffer_ = new uint8_t[MixerThread::AUDIO_BUFFER_SIZE * 4];
+  conversion_buffer_ = new uint8_t[AudioMixer::AUDIO_BUFFER_SIZE * 4];
 }
 
 StereoSoundFragment::StereoSoundFragment(size_t num_samples) {
@@ -134,7 +133,7 @@ void MonoSoundFragment::playFragment(AudioChannel* audio_channel) {
     if (fragment_len < buffer_len) {
   	  buffer_len = fragment_len;
     }
-    CHECK(buffer_len <= MixerThread::AUDIO_BUFFER_SIZE / 4);
+    CHECK(buffer_len <= AudioMixer::AUDIO_BUFFER_SIZE / 4);
     for (int idx = 0; idx < buffer_len; ++idx) {
       conversion_buffer_[idx*4] = fragment_buffer[idx*2];
       conversion_buffer_[idx*4 + 1] = fragment_buffer[idx*2 + 1];
