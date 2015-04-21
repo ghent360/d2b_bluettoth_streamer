@@ -107,4 +107,12 @@ uint32_t PostTimerCallback(uint32_t delay_ms, googleapis::Closure* callback) {
 	g_DelayedProcs.push_back(proc);
 	return proc->token();
 }
+
+void DeletePendingCalls() {
+  for (auto* proc : g_DelayedProcs) {
+    delete proc;
+  }
+  g_DelayedProcs.clear();
+}
+
 } /* namespace iqurius */

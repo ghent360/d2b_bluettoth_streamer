@@ -37,7 +37,7 @@ static const std::map<SoundManager::ESoundID, std::string> g_SoundPaths = {
 		{ SoundManager::SOUND_PREPARING_THE_UPDATE,
 				DATADIR "/Preparing_the_update.ogg" },
 		{ SoundManager::SOUND_UPDATING, DATADIR "/Updating2.ogg" },
-		{ SoundManager::SOUND_READY_TO_PAIR, DATADIR "/Ready_to_pair2.ogg" }
+		{ SoundManager::SOUND_READY_TO_PAIR, DATADIR "/Ready_to_pair1.ogg" }
 };
 
 SoundManager::SoundManager() {

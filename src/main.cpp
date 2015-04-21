@@ -115,6 +115,7 @@ const static dbus::StringWithHash CMD_STOP("STOP");
 const static dbus::StringWithHash CMD_CONT("CONT");
 const static dbus::StringWithHash CMD_NTRK("NTRK");
 const static dbus::StringWithHash CMD_PTRK("PTRK");
+const static dbus::StringWithHash CMD_SDWN("SDWN");
 
 class Application {
 public:
@@ -127,6 +128,7 @@ public:
 		  ping_proc_token_(0),
 		  reconnect_token_(0),
 		  update_checker_token_(0),
+		  shutdown_(false),
 		  mixer_(2),
 		  sound_queue_(mixer_.getAudioChannel(1), mixer_.getAudioChannel(0)),
 		  command_parser_(FLAGS_command_file) {
@@ -360,8 +362,10 @@ public:
 	void onCommand(const char* command) {
 		LOG(INFO) << "Got command: " << command;
 		MyAudioSource* connected_source = sourceConnected();
-		if (connected_source) {
-			dbus::StringWithHash cmd(command);
+		dbus::StringWithHash cmd(command);
+		if (cmd == CMD_SDWN) {
+			shutdown_ = true;
+		} else if (connected_source) {
 			auto* control = connected_source->getTargetControl();
 			control->refreshProperties();
 			control->updatePlayStatus();
@@ -463,12 +467,13 @@ public:
 				*media_endpoint_)) {
 			LOG(ERROR) << "Unable to register the A2DP sync. Check if bluez \n"
 				"has audio support and the configuration is enabled.";
+			adapter_->unregisterAgent(agent_);
+			conn_.removeObject(agent_);
+			agent_ = NULL;
+			conn_.removeObject(adapter_);
+			adapter_ = NULL;
 			delete media_endpoint_;
 			delete adapter_media_interface_;
-			delete agent_;
-			delete adapter_;
-			adapter_ = NULL;
-			agent_ = NULL;
 			adapter_media_interface_ = NULL;
 			media_endpoint_ = NULL;
 			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
@@ -519,14 +524,27 @@ public:
 				&Application::checkForUpdates));
 		iqurius::PostDelayedCallback(UPDATE_CHECK_TIMEOUT,
 			googleapis::NewCallback(this, &Application::removeUpdateChecker));
-		do
-		{
+		shutdown_ = false;
+		while (!shutdown_) {
 			command_parser_.process();
 			iqurius::ProcessDelayedCalls();
 			conn_.process(100); // 100ms timeout
-		} while (true);
-		adapter_media_interface_->unregisterEndpoint(*media_endpoint_);
-		delete adapter_media_interface_;
+		}
+
+		uint32_t timer = timeGetTime();
+		MyAudioSource* connected_source = sourceConnected();
+		if (connected_source) {
+			connected_source->disconnect();
+		}
+		while (elapsedTime(timer) < 2000) {
+			iqurius::ProcessDelayedCalls();
+			conn_.process(100); // 100ms timeout
+		}
+		if (adapter_) {
+			adapter_media_interface_->unregisterEndpoint(*media_endpoint_);
+			delete adapter_media_interface_;
+		}
+		iqurius::DeletePendingCalls();
 		sound_queue_.stop();
 		mixer_.stop();
 	}
@@ -549,6 +567,7 @@ private:
 	uint32_t ping_proc_token_;
 	uint32_t reconnect_token_;
 	uint32_t update_checker_token_;
+	bool shutdown_;
 	iqurius::FirmwareUpdater updater_;
 	iqurius::AudioMixer mixer_;
 	iqurius::SoundQueue sound_queue_;
@@ -574,5 +593,5 @@ int main(int argc, char *argv[]) {
 	}
 	app.mainLoop();
 	LOG(INFO) << "Exiting audio daemon";
-	return 0;
+	return system("/usr/sbin/shutdown -h now");
 }

@@ -22,6 +22,7 @@ uint32_t PostTimerCallback(uint32_t delay_ms, googleapis::Closure* callback);
 bool RemoveTimerCallback(uint32_t token);
 
 void ProcessDelayedCalls();
+void DeletePendingCalls();
 
 } /* namespace iqurius */
 
