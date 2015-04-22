@@ -530,7 +530,18 @@ public:
 			iqurius::ProcessDelayedCalls();
 			conn_.process(100); // 100ms timeout
 		}
-
+		int rc = system("/usr/sbin/shutdown -h now");
+		if (rc) {
+		    LOG(ERROR) << "shutdown returned " << rc;
+		}
+		rc = system("/usr/sbin/halt -p");
+		if (rc) {
+		    LOG(ERROR) << "halt returned " << rc;
+		}
+		while (true) {
+			system("/bin/sync");
+		}
+/*
 		uint32_t timer = timeGetTime();
 		MyAudioSource* connected_source = sourceConnected();
 		if (connected_source) {
@@ -546,7 +557,7 @@ public:
 		}
 		iqurius::DeletePendingCalls();
 		sound_queue_.stop();
-		mixer_.stop();
+		mixer_.stop(); */
 	}
 private:
 	static const uint32_t RECONNECT_TIME = 20000;
@@ -593,5 +604,5 @@ int main(int argc, char *argv[]) {
 	}
 	app.mainLoop();
 	LOG(INFO) << "Exiting audio daemon";
-	return system("/usr/sbin/shutdown -h now");
+	return 0;
 }
