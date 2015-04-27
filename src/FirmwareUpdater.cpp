@@ -41,18 +41,19 @@ bool FirmwareUpdater::remountFlash(bool read_only) {
 	return true;
 }
 
-void FirmwareUpdater::sync() {
-	sync();
+void FirmwareUpdater::SyncDisc() {
+	::sync();
 }
 
 bool FirmwareUpdater::checkUpdateAvailable() {
+	if (update_) {
+		return true;
+	}
+
 	DIR* media_folder = opendir(g_MediaMountPoint);
 	bool result = false;
 	struct dirent* entry;
 
-	if (update_) {
-		return true;
-	}
 	if (NULL == media_folder) {
 		LOG(ERROR) << "Can not access the " << g_MediaMountPoint
 				<< " folder errno=" << errno;
@@ -97,6 +98,8 @@ bool FirmwareUpdater::updateValid() {
 }
 
 bool FirmwareUpdater::update() {
-
+	sleep(20);
+	return true;
 }
+
 } /* namespace iqurius */

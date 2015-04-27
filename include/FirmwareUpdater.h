@@ -25,7 +25,7 @@ public:
 	bool checkUpdateAvailable();
 	bool updateValid();
 	bool update();
-	void sync();
+	void SyncDisc();
 private:
 	bool remountFlash(bool read_only);
 

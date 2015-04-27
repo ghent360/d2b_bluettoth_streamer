@@ -18,7 +18,10 @@
 namespace iqurius {
 
 uint32_t PostDelayedCallback(uint32_t delay_ms, googleapis::Closure* callback);
-uint32_t PostTimerCallback(uint32_t delay_ms, googleapis::Closure* callback);
+uint32_t PostTimerCallback(uint32_t period_ms, googleapis::Closure* callback);
+uint32_t PostTimerCallback(uint32_t delay_ms,
+		uint32_t period_ms,
+		googleapis::Closure* callback);
 bool RemoveTimerCallback(uint32_t token);
 
 void ProcessDelayedCalls();

@@ -99,6 +99,7 @@ void AudioMixer::start() {
     LOG(ERROR) << "Error opening pcm stream: " << snd_strerror(err);
     pcm_handle_ = nullptr;
   } else {
+	snd_config_update_free_global();
     err = snd_pcm_set_params(pcm_handle_,
           SND_PCM_FORMAT_S16_LE,
           SND_PCM_ACCESS_RW_INTERLEAVED,

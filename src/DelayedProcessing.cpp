@@ -20,13 +20,15 @@ static uint32_t g_TokenGenerator = 1;
 
 class DelayedProcessingEntity {
 public:
-	DelayedProcessingEntity(uint32_t period, googleapis::Closure* callback, bool repeat)
+	DelayedProcessingEntity(uint32_t delay,
+			uint32_t period,
+			googleapis::Closure* callback)
 		: period_(0),
 		  callback_(callback),
 		  token_(g_TokenGenerator++) {
 		CHECK(callback != NULL);
-		next_exec_time_ = timeGetTime() + period;
-		if (repeat) {
+		next_exec_time_ = timeGetTime() + delay;
+		if (period) {
 			period_ = period;
 			CHECK(callback->IsRepeatable());
 		} else {
@@ -89,7 +91,7 @@ bool RemoveTimerCallback(uint32_t token) {
 }
 
 uint32_t PostDelayedCallback(uint32_t delay_ms, googleapis::Closure* callback) {
-	DelayedProcessingEntity* proc = new DelayedProcessingEntity(delay_ms, callback, false);
+	DelayedProcessingEntity* proc = new DelayedProcessingEntity(delay_ms, 0, callback);
 	if (proc == NULL) {
 		LOG(ERROR) << "Out of memory";
 		return 0;
@@ -98,8 +100,14 @@ uint32_t PostDelayedCallback(uint32_t delay_ms, googleapis::Closure* callback) {
 	return proc->token();
 }
 
-uint32_t PostTimerCallback(uint32_t delay_ms, googleapis::Closure* callback) {
-	DelayedProcessingEntity* proc = new DelayedProcessingEntity(delay_ms, callback, true);
+uint32_t PostTimerCallback(uint32_t period_ms, googleapis::Closure* callback) {
+	return PostTimerCallback(period_ms, period_ms, callback);
+}
+
+uint32_t PostTimerCallback(uint32_t delay_ms,
+		uint32_t period_ms,
+		googleapis::Closure* callback) {
+	DelayedProcessingEntity* proc = new DelayedProcessingEntity(delay_ms, period_ms, callback);
 	if (proc == NULL) {
 		LOG(ERROR) << "Out of memory";
 		return 0;

@@ -128,7 +128,6 @@ public:
 		  media_endpoint_(NULL),
 		  adapter_media_interface_(NULL),
 		  playback_thread_(NULL),
-		  ping_proc_token_(0),
 		  reconnect_token_(0),
 		  update_checker_token_(0),
 		  shutdown_(false),
@@ -368,23 +367,23 @@ public:
 		if (updater_.checkUpdateAvailable()) {
 			command_parser_.sendStatus("@&FWUP\n");
 			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
-					iqurius::SoundManager::SOUND_PREPARING_THE_UPDATE), 1, 1000);
+					iqurius::SoundManager::SOUND_PLEASE_DONT_TURH_THE_POWER));
+			sound_queue_.waitQueueEmpty();
 			sound_queue_.autoReplay(true);
+			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+					iqurius::SoundManager::SOUND_PREPARING_THE_UPDATE), 1, 1500000);
 			if (updater_.updateValid()) {
-				sound_queue_.autoReplay(false);
-				usleep(2600);
+				sound_queue_.waitQueueEmpty();
+				sound_queue_.autoReplay(true);
 				sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
 						iqurius::SoundManager::SOUND_UPDATING));
-				sound_queue_.autoReplay(true);
 				if (updater_.update()) {
-					updater_.sync();
+					updater_.SyncDisc();
 					shutdown_ = true;
 					sound_queue_.autoReplay(false);
 					sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
 							iqurius::SoundManager::SOUND_UPDATE_COMPLETED));
-					sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
-							iqurius::SoundManager::SOUND_RESTARTING));
-					usleep(5000);
+					sound_queue_.waitQueueEmpty();
 				} else {
 					command_parser_.sendStatus("@&PING\n");
 					sound_queue_.autoReplay(false);
@@ -410,6 +409,7 @@ public:
 				connected_source->disconnect();
 			}
 		} else if (cmd == CMD_C522) {
+			removeUpdateChecker();
 			if (connected_source) {
 				connected_source->disconnect();
 			}
@@ -444,8 +444,8 @@ public:
 				}
 			}
 		} else {
-			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
-					iqurius::SoundManager::SOUND_DISABLED));
+			//sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+			//		iqurius::SoundManager::SOUND_DISABLED));
 		}
 	}
 
@@ -463,7 +463,8 @@ public:
 
 	void removeReconnect() {
 		LOG(INFO) << "Removing reconnect timer proc";
-		iqurius::RemoveTimerCallback(reconnect_token_);
+		if (reconnect_token_)
+			iqurius::RemoveTimerCallback(reconnect_token_);
 		reconnect_token_ = 0;
 	}
 
@@ -479,7 +480,8 @@ public:
 
 	void removeUpdateChecker() {
 		LOG(INFO) << "Removing update checker timer proc";
-		iqurius::RemoveTimerCallback(update_checker_token_);
+		if (update_checker_token_)
+			iqurius::RemoveTimerCallback(update_checker_token_);
 		update_checker_token_ = 0;
 	}
 
@@ -549,6 +551,9 @@ public:
 	}
 
 	void mainLoop() {
+		uint32_t ping_proc_token;
+		uint32_t discoverable_proc_token;
+
 		mixer_.start();
 		sound_queue_.start();
 		command_parser_.setCommandCllaback(
@@ -556,17 +561,18 @@ public:
 						&Application::onCommand));
 
 		// Schedule periodic callbacks
-		ping_proc_token_ = iqurius::PostTimerCallback(PING_TIME,
+		ping_proc_token = iqurius::PostTimerCallback(0, PING_TIME,
 			googleapis::NewPermanentCallback(this,
 				&Application::sendPing));
 
 		connectToBluetoothAdapter();
 
-		iqurius::PostTimerCallback(DISCOVERY_FLAG_RETRY_TIMEOUT,
+		discoverable_proc_token = iqurius::PostTimerCallback(
+				DISCOVERY_FLAG_RETRY_TIMEOUT,
 			googleapis::NewPermanentCallback(this,
 				&Application::startDiscoverable));
 
-		update_checker_token_ = iqurius::PostTimerCallback(UPDATE_CHECK_TIME,
+		update_checker_token_ = iqurius::PostTimerCallback(0, UPDATE_CHECK_TIME,
 			googleapis::NewPermanentCallback(this,
 				&Application::checkForUpdates));
 		iqurius::PostDelayedCallback(UPDATE_CHECK_TIMEOUT,
@@ -577,6 +583,16 @@ public:
 			iqurius::ProcessDelayedCalls();
 			conn_.process(100); // 100ms timeout
 		}
+
+		sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+				iqurius::SoundManager::SOUND_RESTARTING));
+
+		removeReconnect();
+		removeUpdateChecker();
+		iqurius::RemoveTimerCallback(ping_proc_token);
+		iqurius::RemoveTimerCallback(discoverable_proc_token);
+
+		sound_queue_.waitQueueEmpty();
 		int rc = system("/usr/sbin/shutdown -h now");
 		if (rc) {
 		    LOG(ERROR) << "shutdown returned " << rc;
@@ -587,7 +603,7 @@ public:
 		}
 		uint32_t timer = timeGetTime();
 		while (elapsedTime(timer) < SHUTDOWN_TIMEOUT) {
-			updater_.sync();
+			updater_.SyncDisc();
 			iqurius::ProcessDelayedCalls();
 			conn_.process(100); // 100ms timeout
 		}
@@ -606,7 +622,7 @@ private:
 	static const uint32_t CONNECT_TIMEOUT = 10000;
 	static const uint32_t PLAY_TIMEOUT = 15000;
 	static const uint32_t DISCOVERY_FLAG_RETRY_TIMEOUT = 5000;
-	static const uint32_t UPDATE_CHECK_TIME = 2000;
+	static const uint32_t UPDATE_CHECK_TIME = 10000;
 	static const uint32_t UPDATE_CHECK_TIMEOUT = 60000;
 	static const uint32_t SHUTDOWN_TIMEOUT = 5000;
 
@@ -616,7 +632,6 @@ private:
 	dbus::SbcMediaEndpoint* media_endpoint_;
 	dbus::BluezMedia* adapter_media_interface_;
 	dbus::PlaybackThread* playback_thread_;
-	uint32_t ping_proc_token_;
 	uint32_t reconnect_token_;
 	uint32_t update_checker_token_;
 	bool shutdown_;

@@ -40,6 +40,7 @@ public:
 	void scheduleFragment(const char* path, uint32_t repeat = 1, uint32_t delay = 0);
 	void replay() { replay_ = true; }
 	void autoReplay(bool auto_replay) { auto_replay_ = auto_replay; replay_ = auto_replay;}
+	void waitQueueEmpty();
 	void start();
 	void stop();
 private:
@@ -76,6 +77,7 @@ private:
 	bool auto_replay_;
 	bool running_;
 	bool signal_stop_;
+	volatile bool fragment_playback_;
 	pthread_t thread_;
 	googleapis::Mutex mutex_;
 

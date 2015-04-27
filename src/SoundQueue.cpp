@@ -46,20 +46,27 @@ void* SoundQueue::threadProc(void *ctx) {
 
 void SoundQueue::run() {
   FragmentInfo* next_fragment = nullptr;
+  fragment_playback_ = false;
   while (!signal_stop_) {
+	bool got_new_fragment = false;
 	{
 	  googleapis::MutexLock lock(&mutex_);
 	  if (scheduled_fragments_.size() > 0) {
 		delete next_fragment;
 		next_fragment = *scheduled_fragments_.begin();
 		scheduled_fragments_.pop_front();
+		got_new_fragment = true;
 	  }
 	}
+	if (!got_new_fragment) {
+      usleep(100000);
+	}
     if (!next_fragment) {
-        usleep(100000);
-        continue;
+      fragment_playback_ = false;
+      continue;
     }
     while (replay_ || next_fragment->repeatLeft()) {
+      fragment_playback_ = true;
       int16_t old_music_volume = music_audio_channel_->getVolume();
       music_audio_channel_->setVolume(0.3f);
       next_fragment->playFragment(effect_audio_channel_);
@@ -69,7 +76,10 @@ void SoundQueue::run() {
         replay_ = false;
       }
     }
-    sleep(1);  // pause after each message
+    if (fragment_playback_) {
+	  fragment_playback_ = false;
+      sleep(1);  // pause after each message
+    }
   }
   delete next_fragment;
 }
@@ -92,12 +102,30 @@ SoundQueue::FragmentInfo::~FragmentInfo() {
 	delete fragment_;
 }
 
-void SoundQueue::scheduleFragment(const char* path, uint32_t repeat, uint32_t delay) {
+void SoundQueue::waitQueueEmpty() {
+  autoReplay(false);
+  while (true) {
+	{
+      googleapis::MutexLock lock(&mutex_);
+      if (scheduled_fragments_.size() == 0 && !fragment_playback_) {
+        return;
+      }
+	}
+    usleep(250000);
+  }
+}
+
+void SoundQueue::scheduleFragment(const char* path,
+		uint32_t repeat,
+		uint32_t delay) {
   googleapis::MutexLock lock(&mutex_);
-  if (path && scheduled_fragments_.size() < MAX_QUEUED_MESSAGES) {
+  if (!path) {
+	LOG(ERROR) << "Trying to schedule a null pointer fragment";
+  }
+  if (scheduled_fragments_.size() < MAX_QUEUED_MESSAGES) {
 	scheduled_fragments_.push_back(new FragmentInfo(path, repeat, delay));
   } else {
-	LOG(ERROR) << "Trying to schedule a null pointer fragment";
+	LOG(ERROR) << "Sound queue is full.";
   }
 }
 
