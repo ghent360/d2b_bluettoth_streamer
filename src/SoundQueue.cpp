@@ -45,41 +45,57 @@ void* SoundQueue::threadProc(void *ctx) {
 }
 
 void SoundQueue::run() {
-  SoundFragment* fragment = nullptr;
+  FragmentInfo* next_fragment = nullptr;
   while (!signal_stop_) {
-	std::string next_fragment;
 	{
 	  googleapis::MutexLock lock(&mutex_);
 	  if (scheduled_fragments_.size() > 0) {
+		delete next_fragment;
 		next_fragment = *scheduled_fragments_.begin();
 		scheduled_fragments_.pop_front();
 	  }
 	}
-    if (next_fragment.empty()) {
+    if (!next_fragment) {
         usleep(100000);
-    } else {
-	  delete fragment;
-	  fragment = SoundFragment::fromVorbisFile(next_fragment.c_str());
-	  replay_ = true;
+        continue;
     }
-    if (replay_) {
-      if (fragment) {
-    	int16_t old_music_volume = music_audio_channel_->getVolume();
-    	music_audio_channel_->setVolume(0.3f);
-    	fragment->playFragment(effect_audio_channel_);
-    	music_audio_channel_->setVolume(old_music_volume);
-    	sleep(1);  // pause after each message
+    while (replay_ || next_fragment->repeatLeft()) {
+      int16_t old_music_volume = music_audio_channel_->getVolume();
+      music_audio_channel_->setVolume(0.3f);
+      next_fragment->playFragment(effect_audio_channel_);
+      music_audio_channel_->setVolume(old_music_volume);
+      usleep(next_fragment->delay());
+      if (!auto_replay_) {
+        replay_ = false;
       }
-      replay_ = false;
     }
+    sleep(1);  // pause after each message
   }
-  delete fragment;
+  delete next_fragment;
 }
 
-void SoundQueue::scheduleFragment(const char* path) {
+void SoundQueue::FragmentInfo::playFragment(AudioChannel* channel) {
+  if (!fragment_) {
+	  fragment_ = SoundFragment::fromVorbisFile(fragment_path_.c_str());
+  }
+  if (!fragment_) {
+	  LOG(ERROR) << "Unable to load audio fragment " << fragment_path_;
+	  repeat_num_ = 0;
+	  return;
+  }
+  fragment_->playFragment(channel);
+  if (repeat_num_)
+	  repeat_num_--;
+}
+
+SoundQueue::FragmentInfo::~FragmentInfo() {
+	delete fragment_;
+}
+
+void SoundQueue::scheduleFragment(const char* path, uint32_t repeat, uint32_t delay) {
   googleapis::MutexLock lock(&mutex_);
   if (path && scheduled_fragments_.size() < MAX_QUEUED_MESSAGES) {
-	scheduled_fragments_.push_back(std::string(path));
+	scheduled_fragments_.push_back(new FragmentInfo(path, repeat, delay));
   } else {
 	LOG(ERROR) << "Trying to schedule a null pointer fragment";
   }

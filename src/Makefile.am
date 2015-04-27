@@ -1,4 +1,4 @@
-bin_PROGRAMS = bt_a2dp
+bin_PROGRAMS = bt_a2dp mkupdate
 bt_a2dp_SOURCES =               \
     AacMediaEndpoint.cpp        \
     ../include/AacMediaEndpoint.h      \
@@ -83,3 +83,21 @@ bt_a2dp_LDADD =  $(libglog_LIBS) $(dbus_LIBS) \
     $(top_builddir)/sbc/libsbc.la \
     $(top_builddir)/googleapis/base/libgoogleapis.la \
     -lgflags -lasound -lpthread -lgcrypt -llzo2 -lvorbisfile
+
+mkupdate_SOURCES = \
+    mkupdate.cpp   \
+    FirmwareContainer.cpp \
+    ../include/FirmwareContainer.h
+
+mkupdate_CPPFLAGS = \
+    -I$(top_srcdir)/include \
+    -I$(top_srcdir) \
+    $(libglog_CFLAGS) 
+
+mkupdate_CXXFLAGS = --std=c++11 
+
+mkupdate_LDADD =  $(libglog_LIBS) $(dbus_LIBS) \
+    $(top_builddir)/googleapis/base/libgoogleapis.la \
+    -lgflags -lgcrypt -llzo2
+
+     

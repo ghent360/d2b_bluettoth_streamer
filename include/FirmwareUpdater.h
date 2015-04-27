@@ -17,15 +17,19 @@
 
 namespace iqurius {
 
+class FirmwareContainerReader;
 class FirmwareUpdater {
 public:
-	FirmwareUpdater() {}
+	FirmwareUpdater() : update_(nullptr) {}
+	~FirmwareUpdater();
 	bool checkUpdateAvailable();
+	bool updateValid();
+	bool update();
+	void sync();
 private:
 	bool remountFlash(bool read_only);
-	void sync();
 
-	std::string update_file_name_;
+	FirmwareContainerReader* update_;
 	DISALLOW_COPY_AND_ASSIGN(FirmwareUpdater);
 };
 

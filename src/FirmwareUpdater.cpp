@@ -10,6 +10,7 @@
 
 #include "FirmwareUpdater.h"
 
+#include "FirmwareContainer.h"
 #include <dirent.h>
 #include <glog/logging.h>
 #include <sys/mount.h>
@@ -49,7 +50,9 @@ bool FirmwareUpdater::checkUpdateAvailable() {
 	bool result = false;
 	struct dirent* entry;
 
-	update_file_name_.clear();
+	if (update_) {
+		return true;
+	}
 	if (NULL == media_folder) {
 		LOG(ERROR) << "Can not access the " << g_MediaMountPoint
 				<< " folder errno=" << errno;
@@ -69,7 +72,7 @@ bool FirmwareUpdater::checkUpdateAvailable() {
 			update_file_path.append(g_UpdateFileName);
 			if (0 == stat(update_file_path.c_str(), &stat_buf) &&
 				stat_buf.st_size != 0) {
-				update_file_name_ = update_file_path;
+				update_ = new FirmwareContainerReader(update_file_path.c_str());
 				result = true;
 				break;
 			}
@@ -77,5 +80,23 @@ bool FirmwareUpdater::checkUpdateAvailable() {
 	}
 	closedir(media_folder);
 	return result;
+}
+
+FirmwareUpdater::~FirmwareUpdater() {
+	delete update_;
+}
+
+bool FirmwareUpdater::updateValid() {
+	if (!update_) {
+		return false;
+	}
+	if (!update_->loadManifest()) {
+		return false;
+	}
+	return update_->verifyFiles();
+}
+
+bool FirmwareUpdater::update() {
+
 }
 } /* namespace iqurius */

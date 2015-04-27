@@ -98,7 +98,7 @@ protected:
 	}
 
 	void onConnectResult(dbus::Message* msg) {
-		msg->dump("onConnectResult: ");
+		//msg->dump("onConnectResult: ");
 		is_connecting_ = false;
 	}
 
@@ -116,6 +116,9 @@ const static dbus::StringWithHash CMD_CONT("CONT");
 const static dbus::StringWithHash CMD_NTRK("NTRK");
 const static dbus::StringWithHash CMD_PTRK("PTRK");
 const static dbus::StringWithHash CMD_SDWN("SDWN");
+const static dbus::StringWithHash CMD_NEXT("*2");
+const static dbus::StringWithHash CMD_PREV("*3");
+const static dbus::StringWithHash CMD_C522("*522");
 
 class Application {
 public:
@@ -219,6 +222,8 @@ public:
 				LOG(INFO) << "Set discoverable.";
 				adapter_->setDiscoverable(true);
 				//adapter_->setDiscoverableTimeout(3*60); // 3 minutes;
+				sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+						iqurius::SoundManager::SOUND_READY_TO_PAIR));
 			}
 			if (!adapter_->getPairable()) {
 				LOG(INFO) << "Set pairable.";
@@ -359,12 +364,56 @@ public:
 		}
 	}
 
+	void doUpdate() {
+		if (updater_.checkUpdateAvailable()) {
+			command_parser_.sendStatus("@&FWUP\n");
+			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+					iqurius::SoundManager::SOUND_PREPARING_THE_UPDATE), 1, 1000);
+			sound_queue_.autoReplay(true);
+			if (updater_.updateValid()) {
+				sound_queue_.autoReplay(false);
+				usleep(2600);
+				sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+						iqurius::SoundManager::SOUND_UPDATING));
+				sound_queue_.autoReplay(true);
+				if (updater_.update()) {
+					updater_.sync();
+					shutdown_ = true;
+					sound_queue_.autoReplay(false);
+					sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+							iqurius::SoundManager::SOUND_UPDATE_COMPLETED));
+					sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+							iqurius::SoundManager::SOUND_RESTARTING));
+					usleep(5000);
+				} else {
+					command_parser_.sendStatus("@&PING\n");
+					sound_queue_.autoReplay(false);
+					sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+							iqurius::SoundManager::SOUND_INCORRECT));
+				}
+			} else {
+				command_parser_.sendStatus("@&PING\n");
+				sound_queue_.autoReplay(false);
+				sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+						iqurius::SoundManager::SOUND_INCORRECT));
+			}
+		}
+	}
+
 	void onCommand(const char* command) {
 		LOG(INFO) << "Got command: " << command;
 		MyAudioSource* connected_source = sourceConnected();
 		dbus::StringWithHash cmd(command);
 		if (cmd == CMD_SDWN) {
 			shutdown_ = true;
+			if (connected_source) {
+				connected_source->disconnect();
+			}
+		} else if (cmd == CMD_C522) {
+			if (connected_source) {
+				connected_source->disconnect();
+			}
+			doUpdate();
 		} else if (connected_source) {
 			auto* control = connected_source->getTargetControl();
 			control->refreshProperties();
@@ -485,8 +534,6 @@ public:
 		enumerateBluetoothDevices();
 		if (audio_sources_.empty()) {
 			startDiscoverable();
-			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
-					iqurius::SoundManager::SOUND_READY_TO_PAIR));
 		}
 
 		if (FLAGS_autoconnect && !reconnect_token_) {
@@ -538,16 +585,9 @@ public:
 		if (rc) {
 		    LOG(ERROR) << "halt returned " << rc;
 		}
-		while (true) {
-			system("/bin/sync");
-		}
-/*
 		uint32_t timer = timeGetTime();
-		MyAudioSource* connected_source = sourceConnected();
-		if (connected_source) {
-			connected_source->disconnect();
-		}
-		while (elapsedTime(timer) < 2000) {
+		while (elapsedTime(timer) < SHUTDOWN_TIMEOUT) {
+			updater_.sync();
 			iqurius::ProcessDelayedCalls();
 			conn_.process(100); // 100ms timeout
 		}
@@ -557,7 +597,7 @@ public:
 		}
 		iqurius::DeletePendingCalls();
 		sound_queue_.stop();
-		mixer_.stop(); */
+		mixer_.stop();
 	}
 private:
 	static const uint32_t RECONNECT_TIME = 20000;
@@ -568,6 +608,7 @@ private:
 	static const uint32_t DISCOVERY_FLAG_RETRY_TIMEOUT = 5000;
 	static const uint32_t UPDATE_CHECK_TIME = 2000;
 	static const uint32_t UPDATE_CHECK_TIMEOUT = 60000;
+	static const uint32_t SHUTDOWN_TIMEOUT = 5000;
 
 	dbus::Connection conn_;
 	dbus::BluezAdapter* adapter_;
@@ -597,12 +638,14 @@ int main(int argc, char *argv[]) {
 		LOG(ERROR) << "Error initializing the LZO library";
 		return 1;
 	}
-	Application app;
-	if (app.connectBus()) {
-		LOG(ERROR) << "Can't connect to the system D-Bus.";
-		return 2;
+	{  // Scope for the destructor execution.
+		Application app;
+		if (app.connectBus()) {
+			LOG(ERROR) << "Can't connect to the system D-Bus.";
+			return 2;
+		}
+		app.mainLoop();
 	}
-	app.mainLoop();
 	LOG(INFO) << "Exiting audio daemon";
 	return 0;
 }
