@@ -25,7 +25,7 @@ static const char g_StorageMountPoint[] = "/storage";
 static const char g_MediaMountPoint[] = "/media";
 static const char g_UpdateFileName[] = "iqjs.fwu";
 
-bool FirmwareUpdater::remountFlash(bool read_only) {
+bool FirmwareUpdater::RemountFlash(bool read_only) {
 	int result;
 	unsigned long flags = MS_MGC_VAL | MS_REMOUNT | MS_SYNCHRONOUS;
 
@@ -45,7 +45,7 @@ void FirmwareUpdater::SyncDisc() {
 	::sync();
 }
 
-bool FirmwareUpdater::checkUpdateAvailable() {
+bool FirmwareUpdater::CheckUpdateAvailable() {
 	if (update_) {
 		return true;
 	}
@@ -87,7 +87,7 @@ FirmwareUpdater::~FirmwareUpdater() {
 	delete update_;
 }
 
-bool FirmwareUpdater::updateValid() {
+bool FirmwareUpdater::UpdateValid() {
 	if (!update_) {
 		return false;
 	}
@@ -97,9 +97,20 @@ bool FirmwareUpdater::updateValid() {
 	return update_->verifyFiles();
 }
 
-bool FirmwareUpdater::update() {
-	sleep(20);
-	return true;
+bool FirmwareUpdater::Update() {
+	bool result = false;
+	if (!update_) {
+		return false;
+	}
+	if (!RemountFlash(false)) {
+		return false;
+	}
+	result = update_->performUpdate(g_FlashMountPoint, g_StorageMountPoint);
+	SyncDisc();
+	SyncDisc();
+	SyncDisc();
+	RemountFlash(true);
+	return result;
 }
 
 } /* namespace iqurius */

@@ -670,6 +670,7 @@ bool FirmwareContainerReader::performUpdate(const char* flash_path,
 		} else {
 			output_file_name = flash_path;
 		}
+		output_file_name.append("/");
 		output_file_name.append(fi.archive_path_);
 		output_file_name.append(".updated");
 
@@ -727,6 +728,7 @@ bool FirmwareContainerReader::performUpdate(const char* flash_path,
 		} else {
 			saved_file_name = flash_path;
 		}
+		saved_file_name.append("/");
 		saved_file_name.append(fi.archive_path_);
 		saved_file_name.append(".old");
 		if (0 == stat(saved_file_name.c_str(), & stat_buf)) {
@@ -753,13 +755,14 @@ bool FirmwareContainerReader::performUpdate(const char* flash_path,
 		} else {
 			destination_file_name = flash_path;
 		}
+		destination_file_name.append("/");
 		destination_file_name.append(fi.archive_path_);
 		saved_file_name = destination_file_name;
 		updated_file_name = destination_file_name;
 		saved_file_name.append(".old");
 		updated_file_name.append(".updated");
 
-		if (0 == stat(destination_file_name.c_str(), & stat_buf) &&
+		if (0 == stat(destination_file_name.c_str(), &stat_buf) &&
 		    0 != rename(destination_file_name.c_str(),
 				saved_file_name.c_str())) {
 			LOG(ERROR) << "Can not rename " << destination_file_name;

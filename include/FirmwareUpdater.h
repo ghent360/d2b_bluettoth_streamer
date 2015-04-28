@@ -22,12 +22,12 @@ class FirmwareUpdater {
 public:
 	FirmwareUpdater() : update_(nullptr) {}
 	~FirmwareUpdater();
-	bool checkUpdateAvailable();
-	bool updateValid();
-	bool update();
+	bool CheckUpdateAvailable();
+	bool UpdateValid();
+	bool Update();
 	void SyncDisc();
 private:
-	bool remountFlash(bool read_only);
+	bool RemountFlash(bool read_only);
 
 	FirmwareContainerReader* update_;
 	DISALLOW_COPY_AND_ASSIGN(FirmwareUpdater);

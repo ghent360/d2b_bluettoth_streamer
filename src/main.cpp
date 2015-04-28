@@ -364,7 +364,7 @@ public:
 	}
 
 	void doUpdate() {
-		if (updater_.checkUpdateAvailable()) {
+		if (updater_.CheckUpdateAvailable()) {
 			command_parser_.sendStatus("@&FWUP\n");
 			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
 					iqurius::SoundManager::SOUND_PLEASE_DONT_TURH_THE_POWER));
@@ -372,12 +372,12 @@ public:
 			sound_queue_.autoReplay(true);
 			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
 					iqurius::SoundManager::SOUND_PREPARING_THE_UPDATE), 1, 1500000);
-			if (updater_.updateValid()) {
+			if (updater_.UpdateValid()) {
 				sound_queue_.waitQueueEmpty();
 				sound_queue_.autoReplay(true);
 				sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
 						iqurius::SoundManager::SOUND_UPDATING));
-				if (updater_.update()) {
+				if (updater_.Update()) {
 					updater_.SyncDisc();
 					shutdown_ = true;
 					sound_queue_.autoReplay(false);
@@ -469,7 +469,7 @@ public:
 	}
 
 	void checkForUpdates() {
-		if (updater_.checkUpdateAvailable()) {
+		if (updater_.CheckUpdateAvailable()) {
 			LOG(INFO) << "Found firmware update";
 			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
 					iqurius::SoundManager::SOUND_UPDATE_IS_AVAILABLE));
@@ -579,8 +579,8 @@ public:
 			googleapis::NewCallback(this, &Application::removeUpdateChecker));
 		shutdown_ = false;
 		while (!shutdown_) {
-			command_parser_.process();
 			iqurius::ProcessDelayedCalls();
+			command_parser_.process();
 			conn_.process(100); // 100ms timeout
 		}
 
