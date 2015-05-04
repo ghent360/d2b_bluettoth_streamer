@@ -68,8 +68,11 @@ void SoundQueue::run() {
     while (replay_ || next_fragment->repeatLeft()) {
       fragment_playback_ = true;
       int16_t old_music_volume = music_audio_channel_->getVolume();
+      int16_t old_effects_volume = effect_audio_channel_->getVolume();
       music_audio_channel_->setVolume(0.3f);
+      effect_audio_channel_->setVolume(0.7f);
       next_fragment->playFragment(effect_audio_channel_);
+      effect_audio_channel_->setVolume(old_effects_volume);
       music_audio_channel_->setVolume(old_music_volume);
       usleep(next_fragment->delay());
       if (!auto_replay_) {

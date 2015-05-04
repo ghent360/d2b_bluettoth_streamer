@@ -119,6 +119,8 @@ const static dbus::StringWithHash CMD_SDWN("SDWN");
 const static dbus::StringWithHash CMD_NEXT("*2");
 const static dbus::StringWithHash CMD_PREV("*3");
 const static dbus::StringWithHash CMD_C522("*522");
+const static dbus::StringWithHash CMD_PB01("PB01");
+const static dbus::StringWithHash CMD_PB00("PB00");
 
 class Application {
 public:
@@ -133,7 +135,8 @@ public:
 		  shutdown_(false),
 		  mixer_(2),
 		  sound_queue_(mixer_.getAudioChannel(1), mixer_.getAudioChannel(0)),
-		  command_parser_(FLAGS_command_file) {
+		  command_parser_(FLAGS_command_file),
+		  phone_connected_(false) {
 	}
 
 	virtual ~Application() {
@@ -285,9 +288,15 @@ public:
 	    		stopPlayback();
 	    	}
 	    	stopDiscoverable();
-	    	command_parser_.sendStatus("@&CONN\n");
-			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
-					iqurius::SoundManager::SOUND_CORRECT));
+	    	if (!phone_connected_) {
+	    		phone_connected_ = true;
+		    	command_parser_.sendStatus("@&CONN\n");
+	    		command_parser_.sendStatus("@&QSPB\n");
+				sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+						iqurius::SoundManager::SOUND_CORRECT));
+	    	} else {
+		    	command_parser_.sendStatus("@&STOP\n");
+	    	}
 	    	break;
 
 	    case dbus::AudioSource::State::DISCONNECTED:
@@ -297,8 +306,11 @@ public:
 	    		stopPlayback();
 	    	}
 	    	command_parser_.sendStatus("@&DISC\n");
-			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
-					iqurius::SoundManager::SOUND_INCORRECT));
+	    	if (phone_connected_) {
+				phone_connected_ = false;
+				sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+						iqurius::SoundManager::SOUND_INCORRECT));
+	    	}
 	    	break;
 
 	    case dbus::AudioSource::State::CONNECTING:
@@ -418,7 +430,7 @@ public:
 			auto* control = connected_source->getTargetControl();
 			control->refreshProperties();
 			control->updatePlayStatus();
-			if (cmd == CMD_PLAY || cmd == CMD_CONT) {
+			if (cmd == CMD_PLAY || cmd == CMD_CONT || cmd == CMD_PB01) {
 				if (control->getStatus() !=
 						dbus::AudioTargetControl::STATUS_PLAYING) {
 					control->sendButton(
@@ -510,7 +522,7 @@ public:
 		adapter_->setDeviceCreatedCallback(
 			googleapis::NewPermanentCallback(this,
 				&Application::onDeviceCreated));
-		adapter_->setName("iQurius JSync-dev");
+		adapter_->setName("iQurius JSync V2");
 
 		media_endpoint_ = new dbus::SbcMediaEndpoint();
 		//media_endpoint_ = new dbus::AacMediaEndpoint();
@@ -578,6 +590,7 @@ public:
 		iqurius::PostDelayedCallback(UPDATE_CHECK_TIMEOUT,
 			googleapis::NewCallback(this, &Application::removeUpdateChecker));
 		shutdown_ = false;
+		phone_connected_ = false;
 		while (!shutdown_) {
 			iqurius::ProcessDelayedCalls();
 			command_parser_.process();
@@ -641,6 +654,7 @@ private:
 	iqurius::SoundManager sound_manager_;
 	std::list<MyAudioSource*> audio_sources_;
 	CommandParser command_parser_;
+	bool phone_connected_;
 };
 
 int main(int argc, char *argv[]) {
