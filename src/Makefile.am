@@ -15,6 +15,8 @@ bt_a2dp_SOURCES =               \
     ../include/ObjectBase.h            \
     BluezAdapter.cpp            \
     ../include/BluezAdapter.h          \
+    BluezDevice.cpp            \
+    ../include/BluezDevice.h          \
     BluezAgent.cpp              \
     ../include/BluezAgent.h            \
     DelayedProcessing.cpp              \

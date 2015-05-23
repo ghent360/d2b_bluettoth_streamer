@@ -92,8 +92,7 @@ void BluezAdapter::registerAgent(const ObjectPath& path, const char* capability)
 	auto args = rpc.argBuilder();
 	args.append(path);
 	args.append(capability);
-	Message response = connection_->sendWithReplyAndBlock(rpc, -1);
-	response.dump("registerAgent:");
+	connection_->sendWithReplyAndBlock(rpc, -1);
 }
 
 void BluezAdapter::unregisterAgent(const ObjectPath& path) {
@@ -101,8 +100,7 @@ void BluezAdapter::unregisterAgent(const ObjectPath& path) {
 	rpc.prepareCall();
 	auto args = rpc.argBuilder();
 	args.append(path);
-	Message response = connection_->sendWithReplyAndBlock(rpc, -1);
-	response.dump("unregisterAgent:");
+	connection_->sendWithReplyAndBlock(rpc, -1);
 }
 
 void BluezAdapter::registerAgent(BluezAgent* agent) {
@@ -111,6 +109,34 @@ void BluezAdapter::registerAgent(BluezAgent* agent) {
 
 void BluezAdapter::unregisterAgent(BluezAgent* agent) {
 	unregisterAgent(agent->getPathToSelf());
+}
+
+void BluezAdapter::createDevice(const char* address, ObjectPath* result) {
+	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, CREATEDEVICE_METHOD);
+	rpc.prepareCall();
+	auto args = rpc.argBuilder();
+	args.append(address);
+	Message reply = connection_->sendWithReplyAndBlock(rpc, -1);
+	if (reply.msg() != NULL) {
+	    MessageArgumentIterator iter = reply.argIterator();
+		if (iter.hasArgs()) {
+			*result = iter.getObjectPath();
+		}
+	}
+}
+
+static void ReleaseAgent(Connection* conn, BluezAgent* agent, Message*) {
+	conn->removeObject(agent);
+}
+
+void BluezAdapter::createPairedDevice(const char* address, BluezAgent* agent) {
+	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, CREATEPAIREDDEVICE_METHOD);
+	rpc.prepareCall();
+	auto args = rpc.argBuilder();
+	args.append(address);
+	args.append(agent->getPathToSelf());
+	args.append(agent->getCapabilities());
+	connection_->send(rpc, -1, googleapis::NewCallback(ReleaseAgent, connection_, agent));
 }
 
 const StringWithHash BluezAdapter::INTERFACE = "org.bluez.Adapter";

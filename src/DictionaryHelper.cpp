@@ -21,10 +21,14 @@ void DictionaryHelper::dump(const char* prefix) {
 			LOG(INFO) << prefix << " " << value.first << " " << value.second.getBool();
 			break;
 		case DBUS_TYPE_INT16:
+			LOG(INFO) << prefix << " " << value.first << " " << value.second.getShort();
+			break;
 		case DBUS_TYPE_INT32:
 			LOG(INFO) << prefix << " " << value.first << " " << value.second.getInt32();
 			break;
 		case DBUS_TYPE_UINT16:
+			LOG(INFO) << prefix << " " << value.first << " " << value.second.getWord();
+			break;
 		case DBUS_TYPE_UINT32:
 			LOG(INFO) << prefix << " " << value.first << " " << value.second.getUint32();
 			break;

@@ -22,8 +22,8 @@
 
 namespace dbus {
 
-class Connection;
 class BluezAgent;
+class Connection;
 class BluezAdapter : public SimpleObjectBase {
 public:
 	typedef googleapis::Callback2<const char*, BaseMessageIterator*> DeviceFoundCallback;
@@ -108,6 +108,8 @@ public:
     void registerAgent(const ObjectPath&, const char*);
     void unregisterAgent(BluezAgent*);
     void unregisterAgent(const ObjectPath&);
+    void createDevice(const char* address, ObjectPath*);
+    void createPairedDevice(const char* address, BluezAgent*);
 private:
 	static Message handle_DeviceFound(Message& msg, ObjectBase* ctx,
 			const InterfaceImplementation* interface);

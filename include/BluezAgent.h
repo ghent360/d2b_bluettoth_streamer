@@ -30,7 +30,7 @@ public:
 		interface_ = &implementation_;
 	}
 
-	virtual const char* getCapabilities() = 0;
+	virtual const char* getCapabilities() const = 0;
 protected:
 	enum Result {
 		OK = 0,
@@ -95,7 +95,7 @@ class SimpleBluezAgent : public BluezAgent {
 public:
 	SimpleBluezAgent(Connection* conn, uint32_t pin_code);
 
-	virtual const char* getCapabilities() {
+	virtual const char* getCapabilities() const {
 		return "KeyboardDisplay";
 	}
 protected:

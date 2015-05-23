@@ -14,6 +14,7 @@
 #include "AudioTargetControl.h"
 #include "BluezAdapter.h"
 #include "BluezAgent.h"
+#include "BluezDevice.h"
 #include "BluezManager.h"
 #include "BluezMedia.h"
 #include "BluezNames.h"
@@ -41,6 +42,9 @@
 DEFINE_bool(autoconnect, true, "Connect to known devices automatically.");
 DEFINE_string(command_file, "/dev/ttyAMA0",
 		"File or FIFO where to read commands and write status to.");
+
+static const char* A2DP_UUID = "0000110a-0000-1000-8000-00805f9b34fb";
+static const char* SPP_UUID  = "00001101-0000-1000-8000-00805f9b34fb";
 
 class MyAudioSource : public dbus::AudioSource {
 public:
@@ -116,11 +120,14 @@ const static dbus::StringWithHash CMD_CONT("CONT");
 const static dbus::StringWithHash CMD_NTRK("NTRK");
 const static dbus::StringWithHash CMD_PTRK("PTRK");
 const static dbus::StringWithHash CMD_SDWN("SDWN");
-const static dbus::StringWithHash CMD_NEXT("*2");
-const static dbus::StringWithHash CMD_PREV("*3");
+//const static dbus::StringWithHash CMD_NEXT("*2");
+//const static dbus::StringWithHash CMD_PREV("*3");
 const static dbus::StringWithHash CMD_C522("*522");
+//const static dbus::StringWithHash CMD_C525("*525");
+//const static dbus::StringWithHash CMD_C526("*526");
+const static dbus::StringWithHash CMD_C533("*533");
 const static dbus::StringWithHash CMD_PB01("PB01");
-const static dbus::StringWithHash CMD_PB00("PB00");
+//const static dbus::StringWithHash CMD_PB00("PB00");
 
 class Application {
 public:
@@ -207,9 +214,21 @@ public:
 			for (dbus::ObjectPath device_path : adapter_->getDevices()) {
 				MyAudioSource* audio_src = findAudioSource(device_path);
 				if (audio_src == NULL) {
-					audio_src = createAudioSource(device_path);
+					dbus::BluezDevice device(&conn_, device_path);
+					dbus::DictionaryHelper* properties = NULL;
+					device.GetProperties(&properties);
+					if (properties) {
+						auto services = properties->getArray("UUIDs");
+						if (supports(services, A2DP_UUID)) {
+							audio_src = createAudioSource(device_path);
+						}
+						if (supports(services, SPP_UUID)) {
+							LOG(INFO) << "Found screen " << device_path;
+						}
+					}
+					delete properties;
 				}
-				if (FLAGS_autoconnect) {
+				if (FLAGS_autoconnect && audio_src) {
 					audio_src->connectAsync();
 				}
 			}
@@ -268,6 +287,10 @@ public:
 		}
 	}
 
+	void delayedPlaybackStatusCheck() {
+		command_parser_.sendStatus("@&QSPB\n");
+	}
+
 	void onAudioStateChange(dbus::AudioSource::State value,
 			dbus::AudioSource* ctx) {
 		MyAudioSource* audio_src = reinterpret_cast<MyAudioSource*>(ctx);
@@ -291,7 +314,9 @@ public:
 	    	if (!phone_connected_) {
 	    		phone_connected_ = true;
 		    	command_parser_.sendStatus("@&CONN\n");
-	    		command_parser_.sendStatus("@&QSPB\n");
+				iqurius::PostDelayedCallback(PLAYBACK_CHECK_TIME,
+					googleapis::NewCallback(this,
+							&Application::delayedPlaybackStatusCheck));
 				sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
 						iqurius::SoundManager::SOUND_CORRECT));
 	    	} else {
@@ -368,10 +393,39 @@ public:
 		LOG(INFO) << "Device created: " << device_path;
 		MyAudioSource* audio_src = findAudioSource(device_path);
 		if (audio_src == NULL) {
-			audio_src = createAudioSource(device_path);
-			audio_src->connectAsync();
-			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
-					iqurius::SoundManager::SOUND_CORRECT));
+			dbus::BluezDevice device(&conn_, device_path);
+			dbus::DictionaryHelper* properties = NULL;
+			device.GetProperties(&properties);
+			if (properties) {
+				auto services = properties->getArray("UUIDs");
+				if (supports(services, A2DP_UUID)) {
+					audio_src = createAudioSource(device_path);
+					audio_src->connectAsync();
+					sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+							iqurius::SoundManager::SOUND_CORRECT));
+				}
+			}
+			delete properties;
+		}
+	}
+
+	void onDeviceFound(const char* device_address,
+			dbus::BaseMessageIterator* properties) {
+		dbus::DictionaryHelper dict(properties);
+		bool is_paired = dict.getBool("Paired");
+		if (!is_paired) {
+			const char* device_name = dict.getString("Name");
+			uint32_t device_class = dict.getUint32("Class");
+			if (device_class == 0x1F00 &&
+				strncmp(device_name, "iQurius Screen", 14) == 0) {
+				LOG(INFO) << "Found screen " << device_name
+						<< "(" << device_address << ")";
+				dbus::SimpleBluezAgent* agent = new dbus::SimpleBluezAgent(&conn_, 2015);
+				conn_.addObject(agent);
+
+				adapter_->createPairedDevice(device_address, agent);
+				adapter_->stopDiscovery();
+			}
 		}
 	}
 
@@ -426,6 +480,8 @@ public:
 				connected_source->disconnect();
 			}
 			doUpdate();
+		} else if (cmd == CMD_C533) {
+			adapter_->startDiscovery();
 		} else if (connected_source) {
 			auto* control = connected_source->getTargetControl();
 			control->refreshProperties();
@@ -512,6 +568,8 @@ public:
 		adapter_ = new dbus::BluezAdapter(&conn_, adapter_path);
 		conn_.addObject(adapter_);
 
+		adapter_->setName("iQurius JSync V3");
+
 		agent_ = new dbus::SimpleBluezAgent(&conn_, 2015);
 		conn_.addObject(agent_);
 
@@ -522,7 +580,10 @@ public:
 		adapter_->setDeviceCreatedCallback(
 			googleapis::NewPermanentCallback(this,
 				&Application::onDeviceCreated));
-		adapter_->setName("iQurius JSync V2");
+
+		adapter_->setDeviceFoundCallback(
+			googleapis::NewPermanentCallback(this,
+				&Application::onDeviceFound));
 
 		media_endpoint_ = new dbus::SbcMediaEndpoint();
 		//media_endpoint_ = new dbus::AacMediaEndpoint();
@@ -638,6 +699,7 @@ private:
 	static const uint32_t UPDATE_CHECK_TIME = 10000;
 	static const uint32_t UPDATE_CHECK_TIMEOUT = 60000;
 	static const uint32_t SHUTDOWN_TIMEOUT = 5000;
+	static const uint32_t PLAYBACK_CHECK_TIME = 5000;
 
 	dbus::Connection conn_;
 	dbus::BluezAdapter* adapter_;
