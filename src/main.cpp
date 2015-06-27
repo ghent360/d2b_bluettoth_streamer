@@ -26,6 +26,7 @@
 #include "ObjectPath.h"
 #include "SbcDecodeThread.h"
 #include "SbcMediaEndpoint.h"
+#include "Serial.h"
 #include "SoundFragment.h"
 #include "SoundManager.h"
 #include "SoundQueue.h"
@@ -143,7 +144,8 @@ public:
 		  mixer_(2),
 		  sound_queue_(mixer_.getAudioChannel(1), mixer_.getAudioChannel(0)),
 		  command_parser_(FLAGS_command_file),
-		  phone_connected_(false) {
+		  phone_connected_(false),
+		  serial_(NULL) {
 	}
 
 	virtual ~Application() {
@@ -222,8 +224,10 @@ public:
 						if (supports(services, A2DP_UUID)) {
 							audio_src = createAudioSource(device_path);
 						}
-						if (supports(services, SPP_UUID)) {
-							LOG(INFO) << "Found screen " << device_path;
+						if (supports(services, SPP_UUID) && serial_ == NULL) {
+							if (supports(services, SPP_UUID)) {
+								connectSerialPort(device_path);
+							}
 						}
 					}
 					delete properties;
@@ -404,6 +408,9 @@ public:
 					sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
 							iqurius::SoundManager::SOUND_CORRECT));
 				}
+				if (supports(services, SPP_UUID)) {
+					connectSerialPort(device_path);
+				}
 			}
 			delete properties;
 		}
@@ -414,6 +421,7 @@ public:
 		dbus::DictionaryHelper dict(properties);
 		bool is_paired = dict.getBool("Paired");
 		if (!is_paired) {
+			dict.dump("device properties:");
 			const char* device_name = dict.getString("Name");
 			uint32_t device_class = dict.getUint32("Class");
 			if (device_class == 0x1F00 &&
@@ -553,6 +561,28 @@ public:
 		if (update_checker_token_)
 			iqurius::RemoveTimerCallback(update_checker_token_);
 		update_checker_token_ = 0;
+	}
+
+	void onSerialConnectResult(dbus::Message* msg) {
+		if (msg && msg->getType() == DBUS_MESSAGE_TYPE_METHOD_RETURN) {
+		  dbus::MessageArgumentIterator iter = msg->argIterator();
+		  if (iter.hasArgs()) {
+			serial_port_path_.assign(iter.getString());
+			LOG(INFO) << "Connected serial " << serial_port_path_;
+		  }
+		}
+	}
+
+	void connectSerialPort(const dbus::ObjectPath& device_path) {
+		if (serial_) {
+			conn_.removeObject(serial_);
+			serial_ = NULL;
+			serial_port_path_.clear();
+		}
+		serial_ = new dbus::Serial(&conn_, device_path);
+		conn_.addObject(serial_);
+		serial_->connectAsync("spp", -1, googleapis::NewCallback(this,
+				&Application::onSerialConnectResult));
 	}
 
 	void connectToBluetoothAdapter() {
@@ -719,6 +749,8 @@ private:
 	std::list<MyAudioSource*> audio_sources_;
 	CommandParser command_parser_;
 	bool phone_connected_;
+	dbus::Serial* serial_;
+	std::string serial_port_path_;
 };
 
 int main(int argc, char *argv[]) {

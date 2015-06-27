@@ -49,6 +49,8 @@ bt_a2dp_SOURCES =               \
     ../include/DictionaryHelper.h      \
     MediaTransportProperties.cpp \
     ../include/MediaTransportProperties.h  \
+    Serial.cpp             \
+    ../include/Serial.h           \
     SbcDecodeThread.cpp         \
     ../include/SbcDecodeThread.h       \
     BluezNames.cpp	        \
