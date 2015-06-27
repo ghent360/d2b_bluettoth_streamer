@@ -425,6 +425,8 @@ public:
 
 				adapter_->createPairedDevice(device_address, agent);
 				adapter_->stopDiscovery();
+				sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+						iqurius::SoundManager::SOUND_CORRECT));
 			}
 		}
 	}
