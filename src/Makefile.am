@@ -1,5 +1,8 @@
 bin_PROGRAMS = bt_a2dp mkupdate
-bt_a2dp_SOURCES =               \
+noinst_PROGRAMS = serial_screen
+
+lib_LIBRARIES = liba2dp.a
+liba2dp_a_SOURCES = \
     AacMediaEndpoint.cpp        \
     ../include/AacMediaEndpoint.h      \
     InterfaceImplementation.cpp \
@@ -10,7 +13,6 @@ bt_a2dp_SOURCES =               \
     ../include/AudioSource.h           \
     AudioTargetControl.cpp      \
     ../include/AudioTargetControl.h    \
-    main.cpp		        \
     ObjectBase.cpp              \
     ../include/ObjectBase.h            \
     BluezAdapter.cpp            \
@@ -51,6 +53,8 @@ bt_a2dp_SOURCES =               \
     ../include/MediaTransportProperties.h  \
     Serial.cpp             \
     ../include/Serial.h           \
+    TextScreen.cpp             \
+    ../include/TextScreen.h           \
     SbcDecodeThread.cpp         \
     ../include/SbcDecodeThread.h       \
     BluezNames.cpp	        \
@@ -72,6 +76,18 @@ bt_a2dp_SOURCES =               \
     ../include/ObjectPath.h            \
     ../include/util.h
 
+liba2dp_a_CPPFLAGS = \
+    -I$(top_srcdir)/include \
+    -I$(top_srcdir)/sbc \
+    -I$(top_srcdir) \
+    -DDATADIR='"$(datadir)/@PACKAGE@"' \
+    $(dbus_CFLAGS) \
+    $(libglog_CFLAGS) 
+
+liba2dp_a_CXXFLAGS = --std=c++11 
+
+bt_a2dp_SOURCES = \
+    main.cpp
 
 bt_a2dp_CPPFLAGS = \
     -I$(top_srcdir)/include \
@@ -84,9 +100,26 @@ bt_a2dp_CPPFLAGS = \
 bt_a2dp_CXXFLAGS = --std=c++11 
 
 bt_a2dp_LDADD =  $(libglog_LIBS) $(dbus_LIBS) \
+    liba2dp.a \
     $(top_builddir)/sbc/libsbc.la \
     $(top_builddir)/googleapis/base/libgoogleapis.la \
     -lgflags -lasound -lpthread -lgcrypt -llzo2 -lvorbisfile
+
+serial_screen_SOURCES = \
+    serial_main.cpp
+
+serial_screen_CPPFLAGS = \
+    -I$(top_srcdir)/include \
+    -I$(top_srcdir) \
+    $(dbus_CFLAGS) \
+    $(libglog_CFLAGS) 
+
+serial_screen_CXXFLAGS = --std=c++11 
+
+serial_screen_LDADD =  $(libglog_LIBS) $(dbus_LIBS) \
+    liba2dp.a \
+    $(top_builddir)/googleapis/base/libgoogleapis.la \
+    -lgflags -lpthread
 
 mkupdate_SOURCES = \
     mkupdate.cpp   \

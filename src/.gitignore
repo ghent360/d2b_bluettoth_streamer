@@ -1,5 +1,7 @@
 Makefile.in
 *.o
 bt_a2dp
+liba2dp.a
+serial_screen
 .deps/
 .libs/

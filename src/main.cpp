@@ -30,6 +30,7 @@
 #include "SoundFragment.h"
 #include "SoundManager.h"
 #include "SoundQueue.h"
+#include "TextScreen.h"
 #include "time_util.h"
 
 #include <dbus/dbus.h>
