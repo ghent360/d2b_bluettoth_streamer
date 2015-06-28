@@ -226,16 +226,7 @@ public:
 		iqurius::DeletePendingCalls();
 	}
 private:
-	static const uint32_t RECONNECT_TIME = 20000;
-	static const uint32_t RECONNECT_TIMEOUT = 90000;
-	static const uint32_t PING_TIME = 1000;
-	static const uint32_t CONNECT_TIMEOUT = 10000;
-	static const uint32_t PLAY_TIMEOUT = 15000;
 	static const uint32_t DISCOVERY_FLAG_RETRY_TIMEOUT = 5000;
-	static const uint32_t UPDATE_CHECK_TIME = 10000;
-	static const uint32_t UPDATE_CHECK_TIMEOUT = 60000;
-	static const uint32_t SHUTDOWN_TIMEOUT = 5000;
-	static const uint32_t PLAYBACK_CHECK_TIME = 5000;
 
 	dbus::Connection conn_;
 	dbus::BluezAdapter* adapter_;
