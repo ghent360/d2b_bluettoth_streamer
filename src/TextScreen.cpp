@@ -19,14 +19,11 @@
 
 namespace iqurius {
 
-TextScreen::TextScreen(const char* port_name,
-		googleapis::Closure* error_cb)
+TextScreen::TextScreen(googleapis::Closure* error_cb)
     : fd_(-1),
-	  port_name_(port_name),
 	  error_cb_(error_cb) {
-  CHECK(error_cb && !error_cb->IsRepeatable()) <<
-		"Error callback can not be repeatable";
-  open();
+  CHECK(!error_cb || error_cb->IsRepeatable()) <<
+		"Error callback should be repeatable";
 }
 
 TextScreen::~TextScreen() {
@@ -41,16 +38,21 @@ void TextScreen::close() {
   }
 }
 
-void TextScreen::open() {
+void TextScreen::open(const char* port_name) {
   close();
+  port_name_ = port_name;
   fd_ = ::open(port_name_.c_str(), O_RDWR);
   if (fd_ < 0) {
 	LOG(ERROR) << "Error opening " << port_name_ << " errno=" << errno;
 	if (error_cb_) {
 	  error_cb_->Run();
-	  error_cb_ = NULL;
 	}
   }
 }
 
+void TextScreen::tick() {
+  if (is_open()) {
+    write(fd_, "ttt", 3);
+  }
+}
 } /* namespace iqurius */

@@ -33,9 +33,9 @@ class Application {
 public:
 	Application()
         : adapter_(NULL),
-		  agent_(NULL),
 		  shutdown_(false),
-		  serial_(NULL) {
+		  serial_(NULL),
+		  text_screen_(NULL) {
 	}
 
 	virtual ~Application() {
@@ -154,7 +154,9 @@ public:
 		  dbus::MessageArgumentIterator iter = msg->argIterator();
 		  if (iter.hasArgs()) {
 			serial_port_path_.assign(iter.getString());
-			LOG(INFO) << "Connected serial " << serial_port_path_;
+			LOG(INFO) << "Connected serial port " << serial_port_path_;
+			iqurius::PostDelayedCallback(250, googleapis::NewCallback(&text_screen_,
+					&iqurius::TextScreen::open, serial_port_path_.c_str()));
 		  }
 		}
 	}
@@ -184,12 +186,7 @@ public:
 		adapter_ = new dbus::BluezAdapter(&conn_, adapter_path);
 		conn_.addObject(adapter_);
 
-		adapter_->setName("iQurius JSync V3");
-
-		agent_ = new dbus::SimpleBluezAgent(&conn_, 2015);
-		conn_.addObject(agent_);
-
-		adapter_->registerAgent(agent_);
+		adapter_->setName("iQurius Test");
 
 		adapter_->setDeviceCreatedCallback(
 			googleapis::NewPermanentCallback(this,
@@ -210,6 +207,8 @@ public:
 
 		connectToBluetoothAdapter();
 
+		iqurius::PostTimerCallback(1000, googleapis::NewPermanentCallback(&text_screen_,
+							&iqurius::TextScreen::tick));
 		discoverable_proc_token = iqurius::PostTimerCallback(
 				DISCOVERY_FLAG_RETRY_TIMEOUT,
 			googleapis::NewPermanentCallback(this,
@@ -230,10 +229,10 @@ private:
 
 	dbus::Connection conn_;
 	dbus::BluezAdapter* adapter_;
-	dbus::BluezAgent* agent_;
 	bool shutdown_;
 	dbus::Serial* serial_;
 	std::string serial_port_path_;
+	iqurius::TextScreen text_screen_;
 };
 
 int main(int argc, char *argv[]) {

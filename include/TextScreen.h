@@ -20,13 +20,15 @@ namespace iqurius {
 
 class TextScreen {
 public:
-	TextScreen(const char* port_name,
-			googleapis::Closure* error_cb);
+	TextScreen(googleapis::Closure* error_cb = NULL);
 	~TextScreen();
 
-private:
-	void open();
+	void open(const char* port_name);
 	void close();
+
+	void tick();
+private:
+	bool is_open() const { return fd_ >= 0; }
 
 	int fd_;
 	std::string port_name_;
