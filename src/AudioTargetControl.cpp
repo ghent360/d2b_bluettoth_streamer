@@ -66,6 +66,19 @@ void AudioTargetControl::updatePlayStatus() {
 	}
 }
 
+void AudioTargetControl::updateMetadata() {
+	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, GET_METADATA_METHOD);
+	rpc.prepareCall();
+	Message reply = connection_->sendWithReplyAndBlock(rpc, -1);
+	if (reply.msg() != NULL) {
+		MessageArgumentIterator iter = reply.argIterator();
+		if (iter.hasArgs()) {
+			DictionaryHelper dict(&iter);
+			//dict.dump("Track metadata:");
+		}
+	}
+}
+
 void AudioTargetControl::volumeDown() {
 	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, VOLUME_DOWN_METHOD);
 	rpc.prepareCall();
@@ -114,6 +127,7 @@ const StringWithHash AudioTargetControl::VOLUME_UP_METHOD("VolumeUp");
 const StringWithHash AudioTargetControl::SEND_BUTTON_METHOD("SendButton");
 const StringWithHash AudioTargetControl::VOLUME_DOWN_METHOD("VolumeDown");
 const StringWithHash AudioTargetControl::GET_PLAY_STATUS_METHOD("GetPlayStatus");
+const StringWithHash AudioTargetControl::GET_METADATA_METHOD("GetMetadata");
 const StringWithHash AudioTargetControl::GET_EVENT_CAPABILITIES_METHOD("GetEventCapabilities");
 const StringWithHash AudioTargetControl::GETPROPERTIES_METHOD("GetProperties");
 

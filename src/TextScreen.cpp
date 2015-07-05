@@ -30,8 +30,8 @@ TextScreen::TextScreen(googleapis::Closure* error_cb)
   //track_ = "Psycho";
   switch_state_ = EARTIST;
   top_start_ = 0;
-  track_no_ = 1;
-  play_time_ = 0;
+  track_no_ = -1;
+  play_time_ = -1;
   last_switch_time_ = 0;
   switch_time_ = MIN_SWITCH_TIME;
 }
@@ -134,12 +134,21 @@ void TextScreen::tick() {
     bfr[idx++] = '\n';
     write(fd_, bfr, idx);
 
-    int play_time_min = (play_time_ / 60) % 60;
-    int play_time_sec = play_time_ % 60;
-    snprintf(bfr, sizeof(bfr) - 1, "Track %-4d %02d:%02d",
-    		track_no_ % 10000,
-			play_time_min,
-    		play_time_sec);
+    if (track_no_ > 0) {
+      snprintf(bfr, sizeof(bfr) - 1, "Track %-4d ", track_no_ % 10000);
+    } else if (play_time_ >= 0) {
+      strcpy(bfr, "Play time  ");
+    } else {
+      bfr[0] = 9;
+      bfr[1] = 0;
+    }
+    if (play_time_ >= 0) {
+      int play_time_min = (play_time_ / 60) % 60;
+      int play_time_sec = play_time_ % 60;
+      snprintf(bfr + 11, sizeof(bfr) - 12, "%02d:%02d",
+  			play_time_min,
+      		play_time_sec);
+    }
     write(fd_, bfr, strlen(bfr));
 
     if (top_len > 16) {

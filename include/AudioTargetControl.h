@@ -63,6 +63,7 @@ public:
 	void sendButton(uint8_t button_id);
 	void volumeDown();
 	void updatePlayStatus();
+	void updateMetadata();
 
 	uint32_t getSongPos() const { return song_pos_; }
 	uint32_t getSongLen() const { return song_len_; }
@@ -89,6 +90,7 @@ private:
 	static const StringWithHash VOLUME_DOWN_METHOD;
 	static const StringWithHash GET_EVENT_CAPABILITIES_METHOD;
 	static const StringWithHash GET_PLAY_STATUS_METHOD;
+	static const StringWithHash GET_METADATA_METHOD;
 
 	static const StringWithHash PROPERTYCHANGED_SIGNAL;
 	static const StringWithHash CONNECTED_PROPERTY;
