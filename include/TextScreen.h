@@ -26,12 +26,39 @@ public:
 	void open(const char* port_name);
 	void close();
 
+	void setTrackNo(int track_no) {
+	  track_no_ = track_no;
+	}
+
+	void setPlayTime(int play_time) {
+	  play_time_ = play_time;
+	}
+
 	void tick();
 private:
+	enum ESwitchState {
+	  EALBUM,
+	  EARTIST,
+	  ETRACK
+	};
 	bool is_open() const { return fd_ >= 0; }
+	static ESwitchState nextSwitchState(ESwitchState state);
+	void switchTopLine();
+
+	constexpr static uint32_t MIN_SWITCH_TIME = 3500;
 
 	int fd_;
+	int top_start_;
+	int track_no_;
+	int play_time_;
+	std::string artist_;
+	std::string album_;
+	std::string track_;
+	std::string top_line_;
 	std::string port_name_;
+	uint32_t last_switch_time_;
+	uint32_t switch_time_;
+	ESwitchState switch_state_;
 	googleapis::Closure* error_cb_;
 	DISALLOW_COPY_AND_ASSIGN(TextScreen);
 };
