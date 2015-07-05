@@ -25,12 +25,12 @@ TextScreen::TextScreen(googleapis::Closure* error_cb)
 	  error_cb_(error_cb) {
   CHECK(!error_cb || error_cb->IsRepeatable()) <<
 		"Error callback should be repeatable";
-  artist_ = "System of a Down";
-  album_ = "Toxicity";
-  track_ = "Psycho";
+  //artist_ = "System of a Down";
+  //album_ = "Toxicity";
+  //track_ = "Psycho";
   switch_state_ = EARTIST;
   top_start_ = 0;
-  track_no_ = 7;
+  track_no_ = 1;
   play_time_ = 0;
   last_switch_time_ = 0;
   switch_time_ = MIN_SWITCH_TIME;
@@ -89,9 +89,9 @@ void TextScreen::switchTopLine() {
 	    break;
 	  }
 	case ETRACK:
-	  if (!track_.empty()) {
+	  if (!title_.empty()) {
 	    top_line_ = "Title: ";
-	    top_line_ += track_;
+	    top_line_ += title_;
 	    switch_state_ = ETRACK;
 	  } else if (!artist_.empty()) {
 	    top_line_ = "Artist: ";

@@ -34,6 +34,18 @@ public:
 	  play_time_ = play_time;
 	}
 
+	void setArtist(const char* artist) {
+	  artist_ = artist;
+	}
+
+	void setAlbum(const char* album) {
+	  album_ = album;
+	}
+
+	void setTitle(const char* title) {
+	  title_ = title;
+	}
+
 	void tick();
 private:
 	enum ESwitchState {
@@ -53,7 +65,7 @@ private:
 	int play_time_;
 	std::string artist_;
 	std::string album_;
-	std::string track_;
+	std::string title_;
 	std::string top_line_;
 	std::string port_name_;
 	uint32_t last_switch_time_;
