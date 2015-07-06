@@ -24,9 +24,12 @@ public:
 		parse(dict);
 	}
 
-
 	BaseMessageIterator findProperty(const char* name) {
 		return dict_[name];
+	}
+
+	bool hasProperty(const char* name) const {
+		return dict_.find(name) != dict_.end();
 	}
 
 	const char* getString(const char* name) {

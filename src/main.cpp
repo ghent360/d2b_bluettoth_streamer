@@ -146,7 +146,9 @@ public:
 		  sound_queue_(mixer_.getAudioChannel(1), mixer_.getAudioChannel(0)),
 		  command_parser_(FLAGS_command_file),
 		  phone_connected_(false),
-		  serial_(NULL) {
+		  serial_(NULL),
+		  text_screen_(googleapis::NewPermanentCallback(this,
+				  &Application::onScreenDisconnect)) {
 	}
 
 	virtual ~Application() {
@@ -216,23 +218,21 @@ public:
 			adapter_->refreshProperties();
 			for (dbus::ObjectPath device_path : adapter_->getDevices()) {
 				MyAudioSource* audio_src = findAudioSource(device_path);
-				if (audio_src == NULL) {
-					dbus::BluezDevice device(&conn_, device_path);
-					dbus::DictionaryHelper* properties = NULL;
-					device.GetProperties(&properties);
-					if (properties) {
-						auto services = properties->getArray("UUIDs");
-						if (supports(services, A2DP_UUID)) {
-							audio_src = createAudioSource(device_path);
-						}
-						if (supports(services, SPP_UUID) && serial_ == NULL) {
-							if (supports(services, SPP_UUID)) {
-								connectSerialPort(device_path);
-							}
+				dbus::BluezDevice device(&conn_, device_path);
+				dbus::DictionaryHelper* properties = NULL;
+				device.GetProperties(&properties);
+				if (properties) {
+					auto services = properties->getArray("UUIDs");
+					if (supports(services, A2DP_UUID) && audio_src == NULL) {
+						audio_src = createAudioSource(device_path);
+					}
+					if (supports(services, SPP_UUID) && serial_ == NULL) {
+						if (supports(services, SPP_UUID)) {
+							connectSerialPort(device_path);
 						}
 					}
-					delete properties;
 				}
+				delete properties;
 				if (FLAGS_autoconnect && audio_src) {
 					audio_src->connectAsync();
 				}
@@ -440,6 +440,15 @@ public:
 		}
 	}
 
+	void onScreenDisconnect() {
+		serial_->disconnect(serial_port_path_.c_str());
+		conn_.removeObject(serial_);
+		serial_ = NULL;
+		serial_port_path_.clear();
+		iqurius::PostDelayedCallback(500, googleapis::NewCallback(this,
+				&Application::enumerateBluetoothDevices));
+	}
+
 	void doUpdate() {
 		if (updater_.CheckUpdateAvailable()) {
 			command_parser_.sendStatus("@&FWUP\n");
@@ -569,8 +578,26 @@ public:
 		  dbus::MessageArgumentIterator iter = msg->argIterator();
 		  if (iter.hasArgs()) {
 			serial_port_path_.assign(iter.getString());
-			LOG(INFO) << "Connected serial " << serial_port_path_;
+			LOG(INFO) << "Connected serial port " << serial_port_path_;
+			iqurius::PostDelayedCallback(250, googleapis::NewCallback(&text_screen_,
+					&iqurius::TextScreen::open, serial_port_path_.c_str()));
 		  }
+		} else {
+		  msg->dump("onSerialConnectResult:");
+		}
+	}
+
+	void updateScreenData() {
+		MyAudioSource* connected_source = sourceConnected();
+		if (connected_source) {
+			auto* control = connected_source->getTargetControl();
+			control->updatePlayStatus();
+			control->updateMetadata();
+			text_screen_.setTitle(control->getTitle());
+			text_screen_.setAlbum(control->getAlbum());
+			text_screen_.setArtist(control->getArtist());
+			text_screen_.setTrackNo(control->getTrackNo());
+			text_screen_.setPlayTime(control->getSongPos() / 1000);
 		}
 	}
 
@@ -671,6 +698,12 @@ public:
 			googleapis::NewPermanentCallback(this,
 				&Application::sendPing));
 
+		iqurius::PostTimerCallback(1000, googleapis::NewPermanentCallback(&text_screen_,
+							&iqurius::TextScreen::tick));
+
+		iqurius::PostTimerCallback(1000, googleapis::NewPermanentCallback(this,
+							&Application::updateScreenData));
+
 		connectToBluetoothAdapter();
 
 		discoverable_proc_token = iqurius::PostTimerCallback(
@@ -752,6 +785,7 @@ private:
 	bool phone_connected_;
 	dbus::Serial* serial_;
 	std::string serial_port_path_;
+	iqurius::TextScreen text_screen_;
 };
 
 int main(int argc, char *argv[]) {

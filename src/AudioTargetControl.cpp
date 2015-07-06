@@ -29,7 +29,9 @@ AudioTargetControl::AudioTargetControl(Connection* connection, const ObjectPath&
 	  on_state_change_cb_(NULL),
 	  song_pos_(0),
 	  song_len_(0),
-	  status_(STATUS_STOPPED) {
+	  status_(STATUS_STOPPED),
+	  track_no_(-1),
+	  track_count_(-1) {
 	interface_ = &implementation_;
 }
 
@@ -74,7 +76,28 @@ void AudioTargetControl::updateMetadata() {
 		MessageArgumentIterator iter = reply.argIterator();
 		if (iter.hasArgs()) {
 			DictionaryHelper dict(&iter);
-			//dict.dump("Track metadata:");
+			title_.clear();
+			if (dict.hasProperty("Title")) {
+				title_ = dict.getString("Title");
+			}
+			album_.clear();
+			if (dict.hasProperty("Album")) {
+				album_ = dict.getString("Album");
+			}
+			artist_.clear();
+			if (dict.hasProperty("Artist")) {
+				artist_ = dict.getString("Artist");
+			}
+			track_no_ = -1;
+			if (dict.hasProperty("TrackNo")) {
+				const char* value = dict.getString("TrackNo");
+				track_no_ = atoi(value);
+			}
+			track_count_ = -1;
+			if (dict.hasProperty("TrackCount")) {
+				const char* value = dict.getString("TrackCount");
+				track_count_ = atoi(value);
+			}
 		}
 	}
 }

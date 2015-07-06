@@ -18,6 +18,7 @@
 #include "util.h"
 
 #include <googleapis/base/callback.h>
+#include <string>
 
 namespace dbus {
 
@@ -69,6 +70,12 @@ public:
 	uint32_t getSongLen() const { return song_len_; }
 	EPlayerStatus getStatus() const { return status_; }
 
+	int getTrackNo() const { return track_no_; }
+	int getTrackCount() const { return track_count_; }
+	const char* getTitle() const { return title_.c_str(); }
+	const char* getAlbum() const { return album_.c_str(); }
+	const char* getArtist() const { return artist_.c_str(); }
+
 protected:
 	virtual void onStateChanged(bool new_state);
 
@@ -81,6 +88,11 @@ private:
 	uint32_t song_pos_;
 	uint32_t song_len_;
 	EPlayerStatus status_;
+	std::string title_;
+	std::string album_;
+	std::string artist_;
+	int track_no_;
+	int track_count_;
 
 	// DBus metadata
 	static const StringWithHash INTERFACE;

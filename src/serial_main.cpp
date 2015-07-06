@@ -35,7 +35,7 @@ public:
         : adapter_(NULL),
 		  shutdown_(false),
 		  serial_(NULL),
-		  text_screen_(NULL) {
+		  text_screen_(googleapis::NewPermanentCallback(this, &Application::onScreenDisconnect)) {
 	}
 
 	virtual ~Application() {
@@ -114,6 +114,15 @@ public:
 		return false;
 	}
 
+	void onScreenDisconnect() {
+		serial_->disconnect(serial_port_path_.c_str());
+		conn_.removeObject(serial_);
+		serial_ = NULL;
+		serial_port_path_.clear();
+		iqurius::PostDelayedCallback(500, googleapis::NewCallback(this,
+				&Application::enumerateBluetoothDevices));
+	}
+
 	void onDeviceCreated(const dbus::ObjectPath& device_path) {
 		LOG(INFO) << "Device created: " << device_path;
 		dbus::BluezDevice device(&conn_, device_path);
@@ -158,6 +167,8 @@ public:
 			iqurius::PostDelayedCallback(250, googleapis::NewCallback(&text_screen_,
 					&iqurius::TextScreen::open, serial_port_path_.c_str()));
 		  }
+		} else {
+		  msg->dump("onSerialConnectResult:");
 		}
 	}
 

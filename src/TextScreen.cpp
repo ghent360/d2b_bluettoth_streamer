@@ -13,6 +13,7 @@
 
 #include <glog/logging.h>
 
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -116,6 +117,8 @@ void TextScreen::tick() {
   if (is_open()) {
 	char bfr[20];
 	int idx;
+	int result;
+
 	if (elapsedTime(last_switch_time_) > switch_time_) {
 	  last_switch_time_ = timeGetTime();
 	  switch_state_ = nextSwitchState(switch_state_);
@@ -132,7 +135,18 @@ void TextScreen::tick() {
       bfr[idx++] = 9;
     }
     bfr[idx++] = '\n';
-    write(fd_, bfr, idx);
+    result = write(fd_, bfr, idx);
+    if (result < 0) {
+      int err = errno;
+      LOG(ERROR) << "Error writing to text screen errno=" << err;
+      if (err == ENOTCONN || err == EIO) {
+   		if (error_cb_) {
+   		  error_cb_->Run();
+   		}
+    	close();
+    	return;
+      }
+    }
 
     if (track_no_ > 0) {
       snprintf(bfr, sizeof(bfr) - 1, "Track %-4d ", track_no_ % 10000);
@@ -149,7 +163,18 @@ void TextScreen::tick() {
   			play_time_min,
       		play_time_sec);
     }
-    write(fd_, bfr, strlen(bfr));
+    result = write(fd_, bfr, strlen(bfr));
+    if (result < 0) {
+      int err = errno;
+      LOG(ERROR) << "Error writing to text screen errno=" << err;
+      if (err == ENOTCONN || err == EIO) {
+   		if (error_cb_) {
+   		  error_cb_->Run();
+   		}
+      	close();
+      	return;
+      }
+    }
 
     if (top_len > 16) {
 	  top_start_++;
