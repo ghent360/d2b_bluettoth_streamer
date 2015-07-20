@@ -57,6 +57,8 @@ liba2dp_a_SOURCES = \
     ../include/TextScreen.h           \
     SbcDecodeThread.cpp         \
     ../include/SbcDecodeThread.h       \
+    AacDecodeThread.cpp         \
+    ../include/AacDecodeThread.h       \
     BluezNames.cpp	        \
     ../include/BluezNames.h  	       \
     MessageArgumentIterator.cpp \

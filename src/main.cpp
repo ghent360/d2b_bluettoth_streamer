@@ -8,8 +8,9 @@
  * All rights reserved.
  */
 
-#include "AudioMixer.h"
+#include "AacDecodeThread.h"
 #include "AacMediaEndpoint.h"
+#include "AudioMixer.h"
 #include "AudioSource.h"
 #include "AudioTargetControl.h"
 #include "BluezAdapter.h"
@@ -136,7 +137,8 @@ public:
 	Application()
         : adapter_(NULL),
 		  agent_(NULL),
-		  media_endpoint_(NULL),
+		  sbc_media_endpoint_(NULL),
+		  aac_media_endpoint_(NULL),
 		  adapter_media_interface_(NULL),
 		  playback_thread_(NULL),
 		  reconnect_token_(0),
@@ -283,12 +285,18 @@ public:
 
 	void startPlayback() {
 		stopPlayback();
-		if (media_endpoint_) {
+		if (sbc_media_endpoint_->isTransportConfigValid()) {
 			playback_thread_ = new dbus::SbcDecodeThread(&conn_,
-					media_endpoint_->getTransportPath(),
+					sbc_media_endpoint_->getTransportPath(),
 					mixer_.getAudioChannel(0));
 			playback_thread_->start();
-			LOG(INFO) << "Started playback thread.";
+			LOG(INFO) << "Started SBC playback thread.";
+		} else if (aac_media_endpoint_->isTransportConfigValid()) {
+			playback_thread_ = new dbus::AacDecodeThread(&conn_,
+					aac_media_endpoint_->getTransportPath(),
+					mixer_.getAudioChannel(0));
+			playback_thread_->start();
+			LOG(INFO) << "Started ACC playback thread.";
 		}
 	}
 
@@ -302,7 +310,11 @@ public:
 		dbus::AudioSource::State prev_state = audio_src->getState();
 	    switch (value) {
 	    case dbus::AudioSource::State::PLAYING:
-	    	if (media_endpoint_ && media_endpoint_->isTransportConfigValid()) {
+	    	if (sbc_media_endpoint_ && sbc_media_endpoint_->isTransportConfigValid()) {
+	    		startPlayback();
+		    	command_parser_.sendStatus("@&PLAY\n");
+	    	}
+	    	if (aac_media_endpoint_ && aac_media_endpoint_->isTransportConfigValid()) {
 	    		startPlayback();
 		    	command_parser_.sendStatus("@&PLAY\n");
 	    	}
@@ -629,42 +641,49 @@ public:
 		conn_.addObject(adapter_);
 
 		adapter_->setName("iQurius JSync V3");
-
-		agent_ = new dbus::SimpleBluezAgent(&conn_, 2015);
-		conn_.addObject(agent_);
-
-		adapter_->registerAgent(agent_);
-		adapter_media_interface_ = new dbus::BluezMedia(&conn_,
-				adapter_path);
-
 		adapter_->setDeviceCreatedCallback(
 			googleapis::NewPermanentCallback(this,
 				&Application::onDeviceCreated));
-
 		adapter_->setDeviceFoundCallback(
 			googleapis::NewPermanentCallback(this,
 				&Application::onDeviceFound));
 
-		media_endpoint_ = new dbus::SbcMediaEndpoint();
-		//media_endpoint_ = new dbus::AacMediaEndpoint();
+		agent_ = new dbus::SimpleBluezAgent(&conn_, 2015);
+		conn_.addObject(agent_);
+		adapter_->registerAgent(agent_);
+
+		adapter_media_interface_ = new dbus::BluezMedia(&conn_,
+				adapter_path);
+#if 0
+		aac_media_endpoint_ = new dbus::AacMediaEndpoint();
+		conn_.addObject(aac_media_endpoint_);
 		if (!adapter_media_interface_->registerEndpoint(
-				*media_endpoint_)) {
+				*aac_media_endpoint_)) {
+			LOG(ERROR) << "Unable to register the A2DP sync. Check if bluez \n"
+				"has audio support and the configuration is enabled.";
+			conn_.removeObject(aac_media_endpoint_);
+			aac_media_endpoint_ = NULL;
+		}
+#endif
+		sbc_media_endpoint_ = new dbus::SbcMediaEndpoint();
+		conn_.addObject(sbc_media_endpoint_);
+		if (!adapter_media_interface_->registerEndpoint(
+				*sbc_media_endpoint_)) {
 			LOG(ERROR) << "Unable to register the A2DP sync. Check if bluez \n"
 				"has audio support and the configuration is enabled.";
 			adapter_->unregisterAgent(agent_);
 			conn_.removeObject(agent_);
 			agent_ = NULL;
-			conn_.removeObject(adapter_);
-			adapter_ = NULL;
-			delete media_endpoint_;
+			conn_.removeObject(sbc_media_endpoint_);
+			sbc_media_endpoint_ = NULL;
 			delete adapter_media_interface_;
 			adapter_media_interface_ = NULL;
-			media_endpoint_ = NULL;
+			conn_.removeObject(adapter_);
+			adapter_ = NULL;
 			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
 					iqurius::SoundManager::SOUND_UNABLE_TO_CONNECT_TO_BLUETOOTH_ADAPTER));
 			return;
 		}
-		conn_.addObject(media_endpoint_);
 
 		enumerateBluetoothDevices();
 		if (audio_sources_.empty()) {
@@ -748,8 +767,30 @@ public:
 			conn_.process(100); // 100ms timeout
 		}
 		if (adapter_) {
-			adapter_media_interface_->unregisterEndpoint(*media_endpoint_);
+			if (sbc_media_endpoint_) {
+				adapter_media_interface_->unregisterEndpoint(*sbc_media_endpoint_);
+			}
+			if (aac_media_endpoint_) {
+				adapter_media_interface_->unregisterEndpoint(*aac_media_endpoint_);
+			}
 			delete adapter_media_interface_;
+		}
+		if (sbc_media_endpoint_) {
+			conn_.removeObject(sbc_media_endpoint_);
+			sbc_media_endpoint_ = NULL;
+		}
+		if (aac_media_endpoint_) {
+			conn_.removeObject(aac_media_endpoint_);
+			aac_media_endpoint_ = NULL;
+		}
+		if (agent_) {
+			adapter_->unregisterAgent(agent_);
+			conn_.removeObject(agent_);
+			agent_ = NULL;
+		}
+		if (adapter_) {
+			conn_.removeObject(adapter_);
+			adapter_ = NULL;
 		}
 		iqurius::DeletePendingCalls();
 		sound_queue_.stop();
@@ -770,7 +811,8 @@ private:
 	dbus::Connection conn_;
 	dbus::BluezAdapter* adapter_;
 	dbus::BluezAgent* agent_;
-	dbus::SbcMediaEndpoint* media_endpoint_;
+	dbus::SbcMediaEndpoint* sbc_media_endpoint_;
+	dbus::AacMediaEndpoint* aac_media_endpoint_;
 	dbus::BluezMedia* adapter_media_interface_;
 	dbus::PlaybackThread* playback_thread_;
 	uint32_t reconnect_token_;
