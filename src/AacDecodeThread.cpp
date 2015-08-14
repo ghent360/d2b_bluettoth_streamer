@@ -15,22 +15,15 @@
 
 namespace dbus {
 
-static FILE* dump = NULL;
-static int dump_no = 1;
-
 AacDecodeThread::AacDecodeThread(Connection* connection,
 		const ObjectPath& path,
 		iqurius::AudioChannel* audio_channel)
     : PlaybackThread(connection, path, audio_channel) {
-	char dump_name[128];
-	snprintf(dump_name, sizeof(dump_name) - 1, "/tmp/aac_%d.bin", dump_no++);
-	dump = fopen(dump_name, "wb");
+	decoder_ = aacDecoder_Open(TT_MP4_LATM_MCP1, 1);
 }
 
 AacDecodeThread::~AacDecodeThread() {
-	if (dump) {
-		fclose(dump);
-	}
+	aacDecoder_Close(decoder_);
 }
 
 void AacDecodeThread::decode(const uint8_t* buffer, size_t size) {
@@ -71,15 +64,24 @@ void AacDecodeThread::decode(const uint8_t* buffer, size_t size) {
 	if (has_ext) {
 		LOG(WARNING) << "Extensions are not supported";
 	}
-	if (dump) {
-		uint32_t hdr = 0x2b7 << 13;
-		hdr |= size & 0x1FFF;
-		uint8_t hdr_buf[3];
-		hdr_buf[0] = (hdr >> 16);
-		hdr_buf[1] = (hdr >> 8);
-		hdr_buf[2] = hdr;
-		fwrite(hdr_buf, 3, 1, dump);
-		fwrite(buffer, size, 1, dump);
+	unsigned int valid[1];
+	unsigned int sizes[1];
+	unsigned char* buffers[1];
+	valid[0] = size;
+	sizes[0] = size;
+	buffers[0] = const_cast<unsigned char*>(buffer);
+	int err = aacDecoder_Fill(decoder_, buffers, sizes, valid);
+    if (err != 0) {
+		LOG(WARNING) << "Decoder Fill err = " << err;
+	} else {
+		err = aacDecoder_DecodeFrame(decoder_, pcm_buffer_, sizeof(pcm_buffer_), 0);
+		if (err != 0) {
+			LOG(WARNING) << "Decode Frame err = %d\n" << err;
+		} else {
+			CStreamInfo* info = aacDecoder_GetStreamInfo(decoder_);
+			const uint8_t* pcm_data = reinterpret_cast<const uint8_t*>(pcm_buffer_);
+			playPcm(pcm_data, info->numChannels * info->frameSize * sizeof(INT_PCM));
+		}
 	}
 }
 

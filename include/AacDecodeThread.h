@@ -13,6 +13,9 @@
 
 #include "PlaybackThread.h"
 
+#undef IS_LITTLE_ENDIAN
+#include <fdk-aac/aacdecoder_lib.h>
+
 namespace dbus {
 
 class AacDecodeThread : public PlaybackThread {
@@ -25,7 +28,8 @@ public:
 	virtual void decode(const uint8_t* buffer, size_t size);
 
 private:
-	uint8_t pcm_buffer_[8192];
+	INT_PCM pcm_buffer_[2048 * 2];  // Max 2048 samples * 2 channels
+	HANDLE_AACDECODER decoder_;
 
 	DISALLOW_COPY_AND_ASSIGN(AacDecodeThread);
 };
