@@ -1,5 +1,5 @@
-bin_PROGRAMS = bt_a2dp mkupdate
-noinst_PROGRAMS = serial_screen
+bin_PROGRAMS = bt_a2dp
+noinst_PROGRAMS = serial_screen settings mkupdate
 
 lib_LIBRARIES = liba2dp.a
 liba2dp_a_SOURCES = \
@@ -53,10 +53,12 @@ liba2dp_a_SOURCES = \
     ../include/MediaTransportProperties.h  \
     Serial.cpp             \
     ../include/Serial.h           \
-    TextScreen.cpp             \
-    ../include/TextScreen.h           \
     SbcDecodeThread.cpp         \
     ../include/SbcDecodeThread.h       \
+    SettingsManager.cpp         \
+    ../include/SettingsManager.h       \
+    TextScreen.cpp             \
+    ../include/TextScreen.h           \
     AacDecodeThread.cpp         \
     ../include/AacDecodeThread.h       \
     BluezNames.cpp	        \
@@ -119,6 +121,21 @@ serial_screen_CPPFLAGS = \
 serial_screen_CXXFLAGS = --std=c++11 
 
 serial_screen_LDADD =  $(libglog_LIBS) $(dbus_LIBS) \
+    liba2dp.a \
+    $(top_builddir)/googleapis/base/libgoogleapis.la \
+    -lgflags -lpthread
+
+settings_SOURCES = \
+    settings_main.cpp
+
+settings_CPPFLAGS = \
+    -I$(top_srcdir)/include \
+    -I$(top_srcdir) \
+    $(libglog_CFLAGS) 
+
+settings_CXXFLAGS = --std=c++11 
+
+settings_LDADD =  $(libglog_LIBS) $(dbus_LIBS) \
     liba2dp.a \
     $(top_builddir)/googleapis/base/libgoogleapis.la \
     -lgflags -lpthread

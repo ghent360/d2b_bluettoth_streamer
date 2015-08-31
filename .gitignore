@@ -25,3 +25,4 @@ config.status
 libtool
 stamp-h1
 a2dp.service
+bt-a2dp*.tar.gz

@@ -1,5 +1,5 @@
 /*
- * main.cc
+ * serial_main.cpp
  *
  *  Created on: Aug 30, 2014
  *      Author: Venelin Efremov

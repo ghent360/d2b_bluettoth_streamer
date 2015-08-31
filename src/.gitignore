@@ -1,6 +1,7 @@
 Makefile.in
 *.o
 bt_a2dp
+settings
 liba2dp.a
 serial_screen
 .deps/
