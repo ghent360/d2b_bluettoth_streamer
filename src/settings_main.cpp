@@ -19,15 +19,13 @@ int main(int argc, char *argv[]) {
 	LOG(INFO) << "Starting test";
 	std::unique_ptr<iqurius::SettingsManager> sm;
 	iqurius::SettingsManager::open(sm);
-	std::string value;
-	sm->get("FirstTime", &value);
-	LOG(INFO) << "FirstTime=" << value;
+	LOG(INFO) << "FirstTime=" << sm->get("FirstTime", 1);
 	sm->set("FirstTime", 0);
 	sm->set("TestValue", 1234);
 	sm->set("TestValue2", false);
 	sm->set("TestValue3", "=some random text");
 	sm->set("TestValue4", "other random text");
-	sm->set("TestValue5", getpid());
+	sm->get("TestValue5", getpid());
 	LOG(INFO) << "Exiting test";
 	return 0;
 }

@@ -24,10 +24,11 @@ public:
 
 	static void open(std::unique_ptr<SettingsManager>& result);
 
-	bool get(const std::string& key, std::string* value) const;
-	bool get(const std::string& key, int32_t* value) const;
-	bool get(const std::string& key, uint32_t* value) const;
-	bool get(const std::string& key, bool* value) const;
+	bool has(const std::string& key) const;
+	const char* get(const std::string& key, const char* def_value);
+	int32_t get(const std::string& key, int32_t def_value);
+	uint32_t get(const std::string& key, uint32_t def_value);
+	bool get(const std::string& key, bool def_value);
 
 	void set(const std::string& key, const char* value);
 	void set(const std::string& key, const std::string& value);
@@ -37,9 +38,8 @@ public:
 private:
 	SettingsManager() {}
 
-	void defaults();
 	void update();
-	bool validate() const;
+	bool validate();
 	uint32_t calcCRC() const;
 	static void formatLine(const std::string& key,
 			const std::string& value,

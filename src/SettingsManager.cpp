@@ -28,32 +28,34 @@ static const char* SETTINGS_FILE_NAME = "bt-a2dp.settings";
 static const char* CRC_KEY = "__crc__";
 
 void SettingsManager::open(std::unique_ptr<SettingsManager>& result) {
-	SettingsManager* sm = new SettingsManager();
+	result.reset(new SettingsManager());
 	std::string settings_file_name = FLAGS_settings_location + "/" +
 			SETTINGS_FILE_NAME;
-	if (sm->read(settings_file_name.c_str())) {
-		goto exit;
+	if (result->read(settings_file_name.c_str())) {
+		return;
 	}
 	for (int sufix = 1; sufix < 10; sufix++) {
 		std::string file_name = googleapis::StringPrintf(
 				"%s.%d",
 				settings_file_name.c_str(),
 				sufix);
-		if (sm->read(file_name.c_str())) {
-			goto exit;
+		if (result->read(file_name.c_str())) {
+			return;
 		}
 	}
-	sm->defaults();
-exit:
-	result.reset(sm);
+	// Clear the values just in case.
+	result->values_.clear();
 }
 
-bool SettingsManager::validate() const {
+bool SettingsManager::has(const std::string& key) const {
+	const auto& element = values_.find(key);
+	return element != values_.end();
+}
+
+bool SettingsManager::validate() {
+	if (!has(CRC_KEY)) return false;
 	uint32_t crc = calcCRC();
-	uint32_t file_crc = 0;
-	if (!get(CRC_KEY, &file_crc)) {
-		return false;
-	}
+	uint32_t file_crc = get(CRC_KEY, 0);
     return file_crc == crc;
 }
 
@@ -112,47 +114,40 @@ bool SettingsManager::read(const char* file_name) {
 	return validate();
 }
 
-void SettingsManager::defaults() {
-	values_.clear();
-
-	// Add default setting values bellow
-	values_["FirstTime"] = "1";
-}
-
-bool SettingsManager::get(const std::string& key, std::string* value) const {
+const char* SettingsManager::get(const std::string& key, const char* def_value) {
 	const auto& element = values_.find(key);
 	if (element == values_.end()) {
-		return false;
+		set(key, def_value);
+		return def_value;
 	}
-	value->assign(element->second);
-	return true;
+	return element->second.c_str();
 }
 
-bool SettingsManager::get(const std::string& key, int32_t* value) const {
-	std::string value_str;
-	if (!get(key, &value_str)) {
-		return false;
+int32_t SettingsManager::get(const std::string& key, int32_t def_value) {
+	const auto& element = values_.find(key);
+	if (element == values_.end()) {
+		set(key, def_value);
+		return def_value;
 	}
-	*value = atoi(value_str.c_str());
-	return true;
+	return atoi(element->second.c_str());
 }
 
-bool SettingsManager::get(const std::string& key, uint32_t* value) const {
-	std::string value_str;
-	if (!get(key, &value_str)) {
-		return false;
+uint32_t SettingsManager::get(const std::string& key, uint32_t def_value) {
+	const auto& element = values_.find(key);
+	if (element == values_.end()) {
+		set(key, def_value);
+		return def_value;
 	}
-	*value = strtoul(value_str.c_str(), NULL, 10);
-	return true;
+	return strtoul(element->second.c_str(), NULL, 10);
 }
 
-bool SettingsManager::get(const std::string& key, bool* value) const {
-	int value_int;
-	if (!get(key, &value_int)) {
-		return false;
+bool SettingsManager::get(const std::string& key, bool def_value) {
+	const auto& element = values_.find(key);
+	if (element == values_.end()) {
+		set(key, def_value);
+		return def_value;
 	}
-	*value = value_int != 0;
-	return true;
+	return atoi(element->second.c_str()) != 0;
 }
 
 void SettingsManager::set(const std::string& key, const char* value) {
