@@ -28,6 +28,7 @@ MediaEndpoint::MediaEndpoint(const ObjectPath& path)
 void MediaEndpoint::setConfiguration(const ObjectPath& transport,
 		const MediaTransportProperties& properties) {
 	LOG(INFO) << "MediaEndpoint::setConfiguration transport=" << transport.path();
+	properties.dump();
 	transport_path_ = transport;
 	transport_properties_ = properties;
 	transport_config_valid_ = true;

@@ -310,7 +310,6 @@ public:
 	    	if (prev_state == dbus::AudioSource::State::PLAYING) {
 	    		stopPlayback();
 	    	}
-	    	stopDiscoverable();
 	    	if (!phone_connected_) {
 	    		phone_connected_ = true;
 		    	command_parser_.sendStatus("@&CONN\n");
