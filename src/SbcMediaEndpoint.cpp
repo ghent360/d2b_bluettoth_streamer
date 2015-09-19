@@ -24,11 +24,11 @@ SbcMediaEndpoint::SbcMediaEndpoint()
 
 const a2dp_sbc_t SbcMediaEndpoint::CAPABILITIES = {
 	// channel_mode
-	/*SBC_CHANNEL_MODE_MONO |*/ SBC_CHANNEL_MODE_DUAL_CHANNEL |
+	SBC_CHANNEL_MODE_MONO | SBC_CHANNEL_MODE_DUAL_CHANNEL |
 	SBC_CHANNEL_MODE_STEREO | SBC_CHANNEL_MODE_JOINT_STEREO,
 	// frequency
 	/*SBC_SAMPLING_FREQ_16000 | SBC_SAMPLING_FREQ_32000 |*/
-	SBC_SAMPLING_FREQ_44100 /*| SBC_SAMPLING_FREQ_48000*/,
+	SBC_SAMPLING_FREQ_44100 | SBC_SAMPLING_FREQ_48000,
 	// allocation_method
 	SBC_ALLOCATION_SNR | SBC_ALLOCATION_LOUDNESS,
 	// subbands
@@ -114,6 +114,15 @@ bool SbcMediaEndpoint::selectConfiguration(void* capabilities,
     memset(selected_config, 0, sizeof(a2dp_sbc_t));
     input_config = reinterpret_cast<a2dp_sbc_t *>(capabilities);
     selected_config->frequency = SBC_SAMPLING_FREQ_44100;
+    if (input_config->frequency & SBC_SAMPLING_FREQ_44100)
+        selected_config->frequency = SBC_SAMPLING_FREQ_44100;
+    else if (input_config->frequency & SBC_SAMPLING_FREQ_48000) {
+        selected_config->frequency = SBC_SAMPLING_FREQ_48000;
+    } else {
+        LOG(ERROR) << "No supported sampling frequency";
+        return false;
+    }
+
     if (input_config->channel_mode & SBC_CHANNEL_MODE_JOINT_STEREO)
         selected_config->channel_mode = SBC_CHANNEL_MODE_JOINT_STEREO;
     else if (input_config->channel_mode & SBC_CHANNEL_MODE_STEREO)
