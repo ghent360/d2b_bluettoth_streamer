@@ -37,7 +37,7 @@ PlaybackThread::PlaybackThread(Connection* connection,
   if (sampling_rate_ != 44100) {
       soxr_error_t error;
       soxr_io_spec_t io_spec = soxr_io_spec(SOXR_INT16_I, SOXR_INT16_I);
-      soxr_quality_spec_t q_spec = soxr_quality_spec(SOXR_VHQ, 0);
+      soxr_quality_spec_t q_spec = soxr_quality_spec(SOXR_HQ, 0);
       resampler_ = soxr_create(sampling_rate_,
                                44100,
 							   2,  // Number of channels
