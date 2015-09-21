@@ -14,6 +14,7 @@
 #include "MediaTransport.h"
 #include "util.h"
 
+#include <soxr.h>
 #include <pthread.h>
 
 namespace iqurius {
@@ -28,10 +29,14 @@ class PlaybackThread {
 public:
   PlaybackThread(Connection* connection,
 		  const ObjectPath&,
-		  iqurius::AudioChannel* audio_channel);
+		  iqurius::AudioChannel* audio_channel,
+		  int sampling_rate);
   virtual ~PlaybackThread() {
     stop();
-    delete [] audo_leftover_buffer_;
+    delete [] audo_channel_buffer_;
+    if (resampler_) {
+    	soxr_delete(resampler_);
+    }
   };
 
   virtual void decode(const uint8_t* buffer, size_t size) = 0;
@@ -51,9 +56,11 @@ private:
   int fd_;
   int read_mtu_;
   int write_mtu_;
+  int sampling_rate_;
   iqurius::AudioChannel* audio_channel_;
-  uint8_t* audo_leftover_buffer_;
-  size_t audo_leftover_len_;
+  uint8_t* audo_channel_buffer_;
+  size_t audo_buffer_len_;
+  soxr_t resampler_;
 
   static void* threadProc(void *);
   void run();

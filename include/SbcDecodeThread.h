@@ -20,7 +20,8 @@ class SbcDecodeThread : public PlaybackThread {
 public:
 	SbcDecodeThread(Connection* connection,
 			const ObjectPath& path,
-			iqurius::AudioChannel* audio_channel);
+			iqurius::AudioChannel* audio_channel,
+			int sampling_rate);
 	virtual ~SbcDecodeThread();
 
 	virtual void decode(const uint8_t* buffer, size_t size);

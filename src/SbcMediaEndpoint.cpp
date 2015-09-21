@@ -113,24 +113,29 @@ bool SbcMediaEndpoint::selectConfiguration(void* capabilities,
     //taken from pulseaudio with modification
     memset(selected_config, 0, sizeof(a2dp_sbc_t));
     input_config = reinterpret_cast<a2dp_sbc_t *>(capabilities);
-    selected_config->frequency = SBC_SAMPLING_FREQ_44100;
-    if (input_config->frequency & SBC_SAMPLING_FREQ_44100)
+    if (input_config->frequency & SBC_SAMPLING_FREQ_44100) {
         selected_config->frequency = SBC_SAMPLING_FREQ_44100;
-    else if (input_config->frequency & SBC_SAMPLING_FREQ_48000) {
+        LOG(INFO) << "Selected 44.1kHZ sampling rate";
+    } else if (input_config->frequency & SBC_SAMPLING_FREQ_48000) {
         selected_config->frequency = SBC_SAMPLING_FREQ_48000;
+        LOG(INFO) << "Selected 48kHZ sampling rate";
     } else {
         LOG(ERROR) << "No supported sampling frequency";
         return false;
     }
 
-    if (input_config->channel_mode & SBC_CHANNEL_MODE_JOINT_STEREO)
+    if (input_config->channel_mode & SBC_CHANNEL_MODE_JOINT_STEREO) {
         selected_config->channel_mode = SBC_CHANNEL_MODE_JOINT_STEREO;
-    else if (input_config->channel_mode & SBC_CHANNEL_MODE_STEREO)
+        LOG(INFO) << "Selected Joint Stereo.";
+    } else if (input_config->channel_mode & SBC_CHANNEL_MODE_STEREO) {
         selected_config->channel_mode = SBC_CHANNEL_MODE_STEREO;
-    else if (input_config->channel_mode & SBC_CHANNEL_MODE_DUAL_CHANNEL)
+        LOG(INFO) << "Selected Stereo.";
+    } else if (input_config->channel_mode & SBC_CHANNEL_MODE_DUAL_CHANNEL) {
         selected_config->channel_mode = SBC_CHANNEL_MODE_DUAL_CHANNEL;
-    else if (input_config->channel_mode & SBC_CHANNEL_MODE_MONO) {
+        LOG(INFO) << "Selected dual channel.";
+    } else if (input_config->channel_mode & SBC_CHANNEL_MODE_MONO) {
         selected_config->channel_mode = SBC_CHANNEL_MODE_MONO;
+        LOG(INFO) << "Selected mono.";
     } else {
         LOG(ERROR) << "No supported channel modes";
         return false;
@@ -168,6 +173,29 @@ bool SbcMediaEndpoint::selectConfiguration(void* capabilities,
     		selected_config->channel_mode), input_config->max_bitpool);
     *selected_capabilities = reinterpret_cast<uint8_t*>(selected_config);
 	return true;
+}
+
+void SbcMediaEndpoint::setConfiguration(const ObjectPath& transport,
+		const MediaTransportProperties& properties) {
+	MediaEndpoint::setConfiguration(transport, properties);
+	if (properties.getConfigurationLen() != sizeof(a2dp_sbc_t)) {
+		LOG(ERROR) << "Invalid SBC configuration set. Expected "
+				<< sizeof(a2dp_sbc_t) << " bytes got "
+				<< properties.getConfigurationLen();
+		return;
+	}
+	a2dp_sbc_t *configuration = reinterpret_cast<a2dp_sbc_t *>(
+			properties.getConfiguration());
+    if (configuration->frequency & SBC_SAMPLING_FREQ_44100) {
+        LOG(INFO) << "Set 44.1kHZ sampling rate";
+        sampling_rate_ = 44100;
+    } else if (configuration->frequency & SBC_SAMPLING_FREQ_48000) {
+        LOG(INFO) << "Set 48kHZ sampling rate";
+        sampling_rate_ = 48000;
+    } else {
+        LOG(ERROR) << "Set invalid sampling frequency";
+        return;
+    }
 }
 
 } /* namespace dbus */

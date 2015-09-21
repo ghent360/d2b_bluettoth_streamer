@@ -39,6 +39,7 @@ public:
 	virtual uint8_t getCodecId() const = 0;
 	virtual bool getCapabilities(uint8_t* capabilities,
 			size_t* capabilities_max_len) const = 0;
+	virtual int getSamplingRate() const = 0;
 protected:
 	virtual bool selectConfiguration(void* capabilities,
 			size_t capabilities_len,

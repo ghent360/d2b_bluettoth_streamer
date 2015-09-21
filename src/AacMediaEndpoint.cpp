@@ -90,4 +90,7 @@ bool AacMediaEndpoint::selectConfiguration(void* capabilities,
 	return true;
 }
 
+int AacMediaEndpoint::getSamplingRate() const {
+	return 44100;
+}
 } /* namespace dbus */

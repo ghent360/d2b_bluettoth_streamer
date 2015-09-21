@@ -107,7 +107,7 @@ bt_a2dp_LDADD =  $(libglog_LIBS) $(dbus_LIBS) \
     liba2dp.a \
     $(top_builddir)/sbc/libsbc.la \
     $(top_builddir)/googleapis/base/libgoogleapis.la \
-    -lgflags -lasound -lpthread -lgcrypt -llzo2 -lvorbisfile -lfdk-aac
+    -lgflags -lasound -lpthread -lgcrypt -llzo2 -lvorbisfile -lfdk-aac -lsoxr
 
 serial_screen_SOURCES = \
     serial_main.cpp

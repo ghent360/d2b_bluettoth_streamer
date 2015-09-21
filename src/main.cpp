@@ -288,13 +288,15 @@ public:
 		if (sbc_media_endpoint_->isTransportConfigValid()) {
 			playback_thread_ = new dbus::SbcDecodeThread(&conn_,
 					sbc_media_endpoint_->getTransportPath(),
-					mixer_.getAudioChannel(0));
+					mixer_.getAudioChannel(0),
+					sbc_media_endpoint_->getSamplingRate());
 			playback_thread_->start();
 			LOG(INFO) << "Started SBC playback thread.";
 		} else if (aac_media_endpoint_->isTransportConfigValid()) {
 			playback_thread_ = new dbus::AacDecodeThread(&conn_,
 					aac_media_endpoint_->getTransportPath(),
-					mixer_.getAudioChannel(0));
+					mixer_.getAudioChannel(0),
+					aac_media_endpoint_->getSamplingRate());
 			playback_thread_->start();
 			LOG(INFO) << "Started ACC playback thread.";
 		}
@@ -328,6 +330,7 @@ public:
 	    		stopPlayback();
 	    	}
 	    	if (!phone_connected_) {
+				stopDiscoverable();
 	    		phone_connected_ = true;
 		    	command_parser_.sendStatus("@&CONN\n");
 				iqurius::PostDelayedCallback(PLAYBACK_CHECK_TIME,
@@ -602,6 +605,7 @@ public:
 		MyAudioSource* connected_source = sourceConnected();
 		if (connected_source) {
 			auto* control = connected_source->getTargetControl();
+			if (!control->getConnected()) return;
 			control->updatePlayStatus();
 			control->updateMetadata();
 			text_screen_.setTitle(control->getTitle());

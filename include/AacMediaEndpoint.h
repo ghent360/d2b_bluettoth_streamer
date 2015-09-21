@@ -32,6 +32,7 @@ public:
 
 	virtual bool getCapabilities(uint8_t* capabilities,
 			size_t* capabilities_max_len) const;
+	virtual int getSamplingRate() const;
 protected:
 	virtual bool selectConfiguration(void* capabilities,
 			size_t capabilities_len,

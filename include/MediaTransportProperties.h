@@ -37,6 +37,43 @@ public:
 	}
 
 	void dump() const;
+
+	int getCodecId() const {
+		return codec_id_;
+	}
+
+	uint8_t* getConfiguration() const {
+		return configuration_;
+	}
+
+	size_t getConfigurationLen() const {
+		return configuration_len_;
+	}
+
+	unsigned short getDelay() const {
+		return delay_;
+	}
+
+	bool isInboundRingtones() const {
+		return inbound_ringtones_;
+	}
+
+	bool isNrec() const {
+		return nrec_;
+	}
+
+	const std::string& getRouting() const {
+		return routing_;
+	}
+
+	const std::string& getUuid() const {
+		return uuid_;
+	}
+
+	unsigned short getVolume() const {
+		return volume_;
+	}
+
 private:
 	void assign(const MediaTransportProperties&);
 

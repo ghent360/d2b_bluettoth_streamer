@@ -99,6 +99,7 @@ void MediaTransportProperties::dump() const {
     LOG(INFO) << "inbound_ringtones_:" << inbound_ringtones_;
     LOG(INFO) << "routing_:" << routing_;
     LOG(INFO) << "volume_:" << volume_;
+    LOG(INFO) << "configuration_len_:" << configuration_len_;
 }
 
 } /* namespace dbus */

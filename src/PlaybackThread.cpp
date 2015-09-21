@@ -20,7 +20,8 @@ namespace dbus {
 
 PlaybackThread::PlaybackThread(Connection* connection,
     const ObjectPath& transport_path,
-	iqurius::AudioChannel* audio_channel)
+	iqurius::AudioChannel* audio_channel,
+	int sampling_rate)
       : running_(false),
         signal_stop_(false),
         transport_(connection, transport_path),
@@ -28,9 +29,24 @@ PlaybackThread::PlaybackThread(Connection* connection,
         fd_(0),
         read_mtu_(0),
         write_mtu_(0),
+		sampling_rate_(sampling_rate),
 		audio_channel_(audio_channel),
-		audo_leftover_len_(0) {
-  audo_leftover_buffer_ = new uint8_t[iqurius::AudioMixer::AUDIO_BUFFER_SIZE];
+		audo_buffer_len_(0),
+		resampler_(nullptr) {
+  audo_channel_buffer_ = new uint8_t[iqurius::AudioMixer::AUDIO_BUFFER_SIZE];
+  if (sampling_rate_ != 44100) {
+      soxr_error_t error;
+      soxr_io_spec_t io_spec = soxr_io_spec(SOXR_INT16_I, SOXR_INT16_I);
+      soxr_quality_spec_t q_spec = soxr_quality_spec(SOXR_VHQ, 0);
+      resampler_ = soxr_create(sampling_rate_,
+                               44100,
+							   2,  // Number of channels
+							   &error,
+							   &io_spec,
+							   &q_spec,
+							   NULL);
+
+  }
 }
 
 void PlaybackThread::stop() {
@@ -80,7 +96,7 @@ void* PlaybackThread::threadProc(void *ctx) {
 
 void PlaybackThread::run() {
   uint8_t* read_buffer = new uint8_t[read_mtu_];
-  audo_leftover_len_ = 0;
+  audo_buffer_len_ = 0;
   while(!signal_stop_) {
     int len;
     fd_set readset;
@@ -114,23 +130,46 @@ iqurius::AudioBuffer* PlaybackThread::waitForFreeBuffer() {
 }
 
 void PlaybackThread::playPcm(const uint8_t* buffer, size_t size) {
-  while (size > 0) {
-    if (audo_leftover_len_ + size > iqurius::AudioMixer::AUDIO_BUFFER_SIZE) {
-      iqurius::AudioBuffer* audio_buffer = waitForFreeBuffer();
-      if (!audio_buffer) return;
-      if (audo_leftover_len_) {
-        audio_buffer->write(audo_leftover_buffer_, audo_leftover_len_);
-        audo_leftover_len_ = 0;
-      }
-      size_t written = audio_buffer->write(buffer, size);
-      audio_channel_->postBuffer(audio_buffer);
-      buffer += written;
-      size -= written;
-    } else {
-      memcpy(audo_leftover_buffer_ + audo_leftover_len_, buffer, size);
-      audo_leftover_len_ += size;
-      size = 0;
-    }
+  while ((size / 4) > 0) {
+	if (!resampler_) {
+		if (audo_buffer_len_ + size > iqurius::AudioMixer::AUDIO_BUFFER_SIZE) {
+		  iqurius::AudioBuffer* audio_buffer = waitForFreeBuffer();
+		  if (!audio_buffer) return;
+		  if (audo_buffer_len_) {
+			audio_buffer->write(audo_channel_buffer_, audo_buffer_len_);
+			audo_buffer_len_ = 0;
+		  }
+		  size_t written = audio_buffer->write(buffer, size);
+		  audio_channel_->postBuffer(audio_buffer);
+		  buffer += written;
+		  size -= written;
+		} else {
+		  memcpy(audo_channel_buffer_ + audo_buffer_len_, buffer, size);
+		  audo_buffer_len_ += size;
+		  size = 0;
+		}
+	} else {
+		soxr_error_t error;
+		size_t input_consumed;
+		size_t output_written;
+		error = soxr_process(resampler_,
+				             buffer,
+							 size / 4,
+							 &input_consumed,
+							 audo_channel_buffer_ + audo_buffer_len_,
+							 (iqurius::AudioMixer::AUDIO_BUFFER_SIZE - audo_buffer_len_) / 4,
+							 &output_written);
+		audo_buffer_len_ += output_written * 4;
+		if (audo_buffer_len_ == iqurius::AudioMixer::AUDIO_BUFFER_SIZE) {
+			iqurius::AudioBuffer* audio_buffer = waitForFreeBuffer();
+			if (!audio_buffer) return;
+			audio_buffer->write(audo_channel_buffer_, audo_buffer_len_);
+			audio_channel_->postBuffer(audio_buffer);
+			audo_buffer_len_ = 0;
+		}
+		buffer += input_consumed * 4;
+		size -= input_consumed * 4;
+	}
   }
 }
 

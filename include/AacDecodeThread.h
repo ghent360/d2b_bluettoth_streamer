@@ -22,7 +22,8 @@ class AacDecodeThread : public PlaybackThread {
 public:
 	AacDecodeThread(Connection* connection,
 			const ObjectPath& path,
-			iqurius::AudioChannel* audio_channel);
+			iqurius::AudioChannel* audio_channel,
+			int sampling_rate);
 	virtual ~AacDecodeThread();
 
 	virtual void decode(const uint8_t* buffer, size_t size);

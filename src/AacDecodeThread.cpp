@@ -17,8 +17,9 @@ namespace dbus {
 
 AacDecodeThread::AacDecodeThread(Connection* connection,
 		const ObjectPath& path,
-		iqurius::AudioChannel* audio_channel)
-    : PlaybackThread(connection, path, audio_channel) {
+		iqurius::AudioChannel* audio_channel,
+		int sampling_rate)
+    : PlaybackThread(connection, path, audio_channel, sampling_rate) {
 	decoder_ = aacDecoder_Open(TT_MP4_LATM_MCP1, 1);
 }
 

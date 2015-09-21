@@ -16,8 +16,9 @@ namespace dbus {
 
 SbcDecodeThread::SbcDecodeThread(Connection* connection,
 		const ObjectPath& path,
-		iqurius::AudioChannel* audio_channel)
-    : PlaybackThread(connection, path, audio_channel) {
+		iqurius::AudioChannel* audio_channel,
+		int sampling_rate)
+    : PlaybackThread(connection, path, audio_channel, sampling_rate) {
 	sbc_init(&codec_, 0);
 }
 
