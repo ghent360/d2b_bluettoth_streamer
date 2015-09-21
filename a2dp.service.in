@@ -10,6 +10,7 @@ After=sound.target
 ExecStart=@prefix@/bin/bt_a2dp --autoconnect -command_file /dev/ttyAMA0
 Type=simple
 Restart=always
+LimitCORE=infinity
 
 [Install]
 WantedBy=a2dp.target
