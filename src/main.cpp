@@ -440,7 +440,7 @@ public:
 			const char* device_name = dict.getString("Name");
 			uint32_t device_class = dict.getUint32("Class");
 			if (device_class == 0x1F00 &&
-				strncmp(device_name, "iQurius Screen", 14) == 0) {
+				strncmp(device_name, "iQuryus Screen", 14) == 0) {
 				LOG(INFO) << "Found screen " << device_name
 						<< "(" << device_address << ")";
 				dbus::SimpleBluezAgent* agent = new dbus::SimpleBluezAgent(&conn_, 2015);
@@ -643,7 +643,7 @@ public:
 		adapter_ = new dbus::BluezAdapter(&conn_, adapter_path);
 		conn_.addObject(adapter_);
 
-		adapter_->setName("iQurius JSync V3");
+		adapter_->setName("iQuryus JSync V3");
 		adapter_->setDeviceCreatedCallback(
 			googleapis::NewPermanentCallback(this,
 				&Application::onDeviceCreated));
