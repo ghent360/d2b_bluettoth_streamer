@@ -228,11 +228,11 @@ public:
 					if (supports(services, A2DP_UUID) && audio_src == NULL) {
 						audio_src = createAudioSource(device_path);
 					}
-					if (supports(services, SPP_UUID) && serial_ == NULL) {
+					/*if (supports(services, SPP_UUID) && serial_ == NULL) {
 						if (supports(services, SPP_UUID)) {
 							connectSerialPort(device_path);
 						}
-					}
+					}*/
 				}
 				delete properties;
 				if (FLAGS_autoconnect && audio_src) {
