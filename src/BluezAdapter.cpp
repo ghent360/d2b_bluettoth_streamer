@@ -139,6 +139,14 @@ void BluezAdapter::createPairedDevice(const char* address, BluezAgent* agent) {
 	connection_->send(rpc, -1, googleapis::NewCallback(ReleaseAgent, connection_, agent));
 }
 
+void BluezAdapter::removeDevice(const ObjectPath& device) {
+	RemoteMethod rpc(ORG_BLUEZ, getPathToSelf(), INTERFACE, REMOVEDEVICE_METHOD);
+	rpc.prepareCall();
+	auto args = rpc.argBuilder();
+	args.append(device);
+	connection_->sendWithReplyAndBlock(rpc, -1);
+}
+
 const StringWithHash BluezAdapter::INTERFACE = "org.bluez.Adapter";
 
 const StringWithHash BluezAdapter::GETPROPERTIES_METHOD = "GetProperties";

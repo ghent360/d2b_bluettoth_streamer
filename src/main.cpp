@@ -129,6 +129,7 @@ const static dbus::StringWithHash CMD_C522("*522");
 //const static dbus::StringWithHash CMD_C525("*525");
 //const static dbus::StringWithHash CMD_C526("*526");
 const static dbus::StringWithHash CMD_C533("*533");
+const static dbus::StringWithHash CMD_C534("*534");
 const static dbus::StringWithHash CMD_PB01("PB01");
 //const static dbus::StringWithHash CMD_PB00("PB00");
 
@@ -238,6 +239,19 @@ public:
 				if (FLAGS_autoconnect && audio_src) {
 					audio_src->connectAsync();
 				}
+			}
+		}
+	}
+
+	void clearBluetoothDevices() {
+		if (adapter_) {
+			adapter_->refreshProperties();
+			for (dbus::ObjectPath device_path : adapter_->getDevices()) {
+				MyAudioSource* audio_src = findAudioSource(device_path);
+				if (audio_src && audio_src == sourceConnected()) {
+					continue; // Can't remove the currently connected phone
+				}
+				adapter_->removeDevice(device_path);
 			}
 		}
 	}
@@ -516,6 +530,13 @@ public:
 			doUpdate();
 		} else if (cmd == CMD_C533) {
 			adapter_->startDiscovery();
+		} else if (cmd == CMD_C534) {
+			if (connected_source) {
+				connected_source->disconnect();
+			}
+			clearBluetoothDevices();
+			sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
+					iqurius::SoundManager::SOUND_CORRECT));
 		} else if (connected_source) {
 			auto* control = connected_source->getTargetControl();
 			control->refreshProperties();

@@ -110,6 +110,7 @@ public:
     void unregisterAgent(const ObjectPath&);
     void createDevice(const char* address, ObjectPath*);
     void createPairedDevice(const char* address, BluezAgent*);
+    void removeDevice(const ObjectPath& device);
 private:
 	static Message handle_DeviceFound(Message& msg, ObjectBase* ctx,
 			const InterfaceImplementation* interface);
