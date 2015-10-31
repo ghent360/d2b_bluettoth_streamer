@@ -38,6 +38,7 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <googleapis/base/callback.h>
+#include <googleapis/base/stringprintf.h>
 #include <lzo/lzoconf.h>
 #include <lzo/lzo1x.h>
 #include <stdint.h>
@@ -245,6 +246,8 @@ public:
 
 	void clearBluetoothDevices() {
 		if (adapter_) {
+			// Disable watchdog so we don't get rebooted
+			command_parser_.sendStatus("@&NOWD\n");
 			adapter_->refreshProperties();
 			for (dbus::ObjectPath device_path : adapter_->getDevices()) {
 				MyAudioSource* audio_src = findAudioSource(device_path);
@@ -253,6 +256,8 @@ public:
 				}
 				adapter_->removeDevice(device_path);
 			}
+			// Re-enable the watchdog.
+			command_parser_.sendStatus("@&PING\n");
 		}
 	}
 
@@ -437,9 +442,9 @@ public:
 					sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
 							iqurius::SoundManager::SOUND_CORRECT));
 				}
-				if (supports(services, SPP_UUID)) {
+				/*if (supports(services, SPP_UUID)) {
 					connectSerialPort(device_path);
-				}
+				}*/
 			}
 			delete properties;
 		}
@@ -629,11 +634,23 @@ public:
 			if (!control->getConnected()) return;
 			control->updatePlayStatus();
 			control->updateMetadata();
+			int track_no = control->getTrackNo();
+			int sond_pos = control->getSongPos() / 1000;
 			text_screen_.setTitle(control->getTitle());
 			text_screen_.setAlbum(control->getAlbum());
 			text_screen_.setArtist(control->getArtist());
-			text_screen_.setTrackNo(control->getTrackNo());
-			text_screen_.setPlayTime(control->getSongPos() / 1000);
+			text_screen_.setTrackNo(track_no);
+			text_screen_.setPlayTime(sond_pos);
+
+			if (track_no > 0) {
+				std::string track = googleapis::StringPrintf("@&TR%02d\n",
+						track_no % 100);
+				command_parser_.sendStatus(track.c_str());
+			}
+			std::string time = googleapis::StringPrintf("@&%02d%02d\n",
+					(sond_pos / 100) % 100,  // Minutes
+					(sond_pos) % 100);       // Seconds
+			command_parser_.sendStatus(time.c_str());
 		}
 	}
 
