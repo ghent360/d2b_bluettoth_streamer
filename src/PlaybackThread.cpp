@@ -24,6 +24,7 @@ PlaybackThread::PlaybackThread(Connection* connection,
 	int sampling_rate)
       : running_(false),
         signal_stop_(false),
+        decoding_ok_(false),
         transport_(connection, transport_path),
         thread_(),
         fd_(0),
@@ -49,12 +50,7 @@ PlaybackThread::PlaybackThread(Connection* connection,
   }
 }
 
-void PlaybackThread::stop() {
-  if (running_) {
-    signal_stop_ = true;
-    pthread_join(thread_, NULL);
-    running_ = false;
-  }
+void PlaybackThread::freeTransport() {
   if (fd_) {
     transport_.release("rw");
     close(fd_);
@@ -64,20 +60,29 @@ void PlaybackThread::stop() {
   }
 }
 
-void PlaybackThread::start() {
+bool PlaybackThread::acqureTransport() {
+  freeTransport();
+  return transport_.acquire("rw", &fd_, &read_mtu_, &write_mtu_);
+}
+
+void PlaybackThread::stop() {
   if (running_) {
+    signal_stop_ = true;
+    pthread_join(thread_, NULL);
+    running_ = false;
+  }
+  freeTransport();
+}
+
+void PlaybackThread::start() {
+  if (ok()) {
     LOG(WARNING) << "Playback thread already running.";
     return;
   }
-  if (fd_) {
-    transport_.release("rw");
-    close(fd_);
-    fd_ = 0;
-    read_mtu_ = 0;
-    write_mtu_ = 0;
-  }
-  if (transport_.acquire("rw", &fd_, &read_mtu_, &write_mtu_)) {
+  stop();
+  if (acqureTransport()) {
     signal_stop_ = false;
+    decoding_ok_ = true;
     pthread_create(&thread_, NULL, threadProc, this);
     running_ = true;
   }
@@ -107,16 +112,24 @@ void PlaybackThread::run() {
     timeout.tv_sec = 0;
     timeout.tv_usec = 100000;  // 100ms
     len = select(fd_ + 1, &readset, NULL, NULL, &timeout);
-    if (len <= 0) continue;
+    if (len < 0) {
+      LOG(ERROR) << "select FD " << fd_ << " error = " << errno;
+      break;
+    }
+    if (len == 0) {
+      continue;
+    }
 
     len = read(fd_, read_buffer, read_mtu_);
     if (len > 0) {
       decode(read_buffer, len);
     } else if (errno != EAGAIN) {
-      LOG(ERROR) << "FD " << fd_ << " error = " << errno;
+      LOG(ERROR) << "read FD " << fd_ << " error = " << errno;
+      break;
     }
   }
   delete [] read_buffer;
+  decoding_ok_ = false;
 }
 
 iqurius::AudioBuffer* PlaybackThread::waitForFreeBuffer() {

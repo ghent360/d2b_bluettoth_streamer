@@ -150,9 +150,9 @@ public:
 		  sound_queue_(mixer_.getAudioChannel(1), mixer_.getAudioChannel(0)),
 		  command_parser_(FLAGS_command_file),
 		  phone_connected_(false),
-		  serial_(NULL),
+		  serial_(NULL)/*,
 		  text_screen_(googleapis::NewPermanentCallback(this,
-				  &Application::onScreenDisconnect)) {
+				  &Application::onScreenDisconnect)) */ {
 	}
 
 	virtual ~Application() {
@@ -302,22 +302,38 @@ public:
 	    }
 	}
 
+	void suspendPlayback() {
+		LOG(INFO) << "Playback thread suspended.";
+	}
+
 	void startPlayback() {
-		stopPlayback();
-		if (sbc_media_endpoint_->isTransportConfigValid()) {
+		if (sbc_media_endpoint_ &&
+			sbc_media_endpoint_->isTransportConfigValid() &&
+			(!playback_thread_ ||
+			 !playback_thread_->ok() ||
+			 playback_thread_->codecId() != dbus::PlaybackThread::E_SBC)) {
+			stopPlayback();
 			playback_thread_ = new dbus::SbcDecodeThread(&conn_,
 					sbc_media_endpoint_->getTransportPath(),
 					mixer_.getAudioChannel(0),
 					sbc_media_endpoint_->getSamplingRate());
 			playback_thread_->start();
 			LOG(INFO) << "Started SBC playback thread.";
-		} else if (aac_media_endpoint_->isTransportConfigValid()) {
+			return;
+		}
+		if (aac_media_endpoint_ &&
+		    aac_media_endpoint_->isTransportConfigValid() &&
+			(!playback_thread_ ||
+			 !playback_thread_->ok() ||
+			 playback_thread_->codecId() != dbus::PlaybackThread::E_AAC)) {
+			stopPlayback();
 			playback_thread_ = new dbus::AacDecodeThread(&conn_,
 					aac_media_endpoint_->getTransportPath(),
 					mixer_.getAudioChannel(0),
 					aac_media_endpoint_->getSamplingRate());
 			playback_thread_->start();
 			LOG(INFO) << "Started ACC playback thread.";
+			return;
 		}
 	}
 
@@ -346,7 +362,7 @@ public:
 	    	// If this device was in playing state, stop the playback,
 			// otherwise ignore.
 	    	if (prev_state == dbus::AudioSource::State::PLAYING) {
-	    		stopPlayback();
+                suspendPlayback();
 	    	}
 	    	if (!phone_connected_) {
 				stopDiscoverable();
@@ -473,14 +489,14 @@ public:
 		}
 	}
 
-	void onScreenDisconnect() {
+	/*void onScreenDisconnect() {
 		serial_->disconnect(serial_port_path_.c_str());
 		conn_.removeObject(serial_);
 		serial_ = NULL;
 		serial_port_path_.clear();
 		iqurius::PostDelayedCallback(500, googleapis::NewCallback(this,
 				&Application::enumerateBluetoothDevices));
-	}
+	}*/
 
 	void doUpdate() {
 		if (updater_.CheckUpdateAvailable()) {
@@ -613,7 +629,7 @@ public:
 		update_checker_token_ = 0;
 	}
 
-	void onSerialConnectResult(dbus::Message* msg) {
+	/*void onSerialConnectResult(dbus::Message* msg) {
 		if (msg && msg->getType() == DBUS_MESSAGE_TYPE_METHOD_RETURN) {
 		  dbus::MessageArgumentIterator iter = msg->argIterator();
 		  if (iter.hasArgs()) {
@@ -625,7 +641,7 @@ public:
 		} else {
 		  msg->dump("onSerialConnectResult:");
 		}
-	}
+	}*/
 
 	void updateScreenData() {
 		MyAudioSource* connected_source = sourceConnected();
@@ -636,11 +652,11 @@ public:
 			control->updateMetadata();
 			int track_no = control->getTrackNo();
 			int sond_pos = control->getSongPos() / 1000;
-			text_screen_.setTitle(control->getTitle());
+			/*text_screen_.setTitle(control->getTitle());
 			text_screen_.setAlbum(control->getAlbum());
 			text_screen_.setArtist(control->getArtist());
 			text_screen_.setTrackNo(track_no);
-			text_screen_.setPlayTime(sond_pos);
+			text_screen_.setPlayTime(sond_pos);*/
 
 			if (track_no > 0) {
 				std::string track = googleapis::StringPrintf("@&TR%02d\n",
@@ -654,7 +670,7 @@ public:
 		}
 	}
 
-	void connectSerialPort(const dbus::ObjectPath& device_path) {
+	/*void connectSerialPort(const dbus::ObjectPath& device_path) {
 		if (serial_) {
 			conn_.removeObject(serial_);
 			serial_ = NULL;
@@ -664,7 +680,7 @@ public:
 		conn_.addObject(serial_);
 		serial_->connectAsync("spp", -1, googleapis::NewCallback(this,
 				&Application::onSerialConnectResult));
-	}
+	}*/
 
 	void connectToBluetoothAdapter() {
 		if (adapter_) {
@@ -758,8 +774,8 @@ public:
 			googleapis::NewPermanentCallback(this,
 				&Application::sendPing));
 
-		iqurius::PostTimerCallback(1000, googleapis::NewPermanentCallback(&text_screen_,
-							&iqurius::TextScreen::tick));
+		//iqurius::PostTimerCallback(1000, googleapis::NewPermanentCallback(&text_screen_,
+		//					&iqurius::TextScreen::tick));
 
 		iqurius::PostTimerCallback(1000, googleapis::NewPermanentCallback(this,
 							&Application::updateScreenData));
@@ -868,7 +884,7 @@ private:
 	bool phone_connected_;
 	dbus::Serial* serial_;
 	std::string serial_port_path_;
-	iqurius::TextScreen text_screen_;
+	//iqurius::TextScreen text_screen_;
 };
 
 int main(int argc, char *argv[]) {

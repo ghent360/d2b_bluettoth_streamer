@@ -27,6 +27,11 @@ namespace dbus {
 class ObjectPath;
 class PlaybackThread {
 public:
+  enum ECodecID {
+    E_SBC,
+	E_AAC
+  };
+
   PlaybackThread(Connection* connection,
 		  const ObjectPath&,
 		  iqurius::AudioChannel* audio_channel,
@@ -40,16 +45,22 @@ public:
   };
 
   virtual void decode(const uint8_t* buffer, size_t size) = 0;
+  virtual ECodecID codecId() const = 0;
   void playPcm(const uint8_t* buffer, size_t size);
 
   void start();
   void stop();
 
+  bool ok() const { return running_ && decoding_ok_; }
+
 private:
   iqurius::AudioBuffer* waitForFreeBuffer();
+  void freeTransport();
+  bool acqureTransport();
 
   bool running_;
   bool signal_stop_;
+  bool decoding_ok_;
   MediaTransport transport_;
   pthread_t thread_;
 

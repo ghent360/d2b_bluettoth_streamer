@@ -25,7 +25,7 @@ public:
 	virtual ~SbcDecodeThread();
 
 	virtual void decode(const uint8_t* buffer, size_t size);
-
+	virtual ECodecID codecId() const { return E_SBC; }
 private:
 	sbc_t codec_;
 	uint8_t pcm_buffer_[8192];

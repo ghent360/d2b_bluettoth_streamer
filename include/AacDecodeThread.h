@@ -27,7 +27,7 @@ public:
 	virtual ~AacDecodeThread();
 
 	virtual void decode(const uint8_t* buffer, size_t size);
-
+	virtual ECodecID codecId() const { return E_AAC; }
 private:
 	INT_PCM pcm_buffer_[2048 * 2];  // Max 2048 samples * 2 channels
 	HANDLE_AACDECODER decoder_;
