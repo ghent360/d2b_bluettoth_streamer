@@ -645,7 +645,8 @@ public:
 
 	void updateScreenData() {
 		MyAudioSource* connected_source = sourceConnected();
-		if (connected_source) {
+		if (connected_source &&
+			connected_source->getState() == dbus::AudioSource::State::PLAYING) {
 			auto* control = connected_source->getTargetControl();
 			if (!control->getConnected()) return;
 			control->updatePlayStatus();
