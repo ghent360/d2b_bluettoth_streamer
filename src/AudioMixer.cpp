@@ -10,8 +10,11 @@
 
 #include "AudioMixer.h"
 
+#include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <sched.h>
+
+DEFINE_string(audio_output, "default", "Name of the audio output device.");
 
 namespace iqurius {
 
@@ -94,7 +97,10 @@ void AudioMixer::start() {
     snd_pcm_close(pcm_handle_);
     pcm_handle_ = nullptr;
   }
-  int err = snd_pcm_open(&pcm_handle_, "default", SND_PCM_STREAM_PLAYBACK, 0);
+  int err = snd_pcm_open(&pcm_handle_,
+		  	  	  	  	 FLAGS_audio_output.c_str(),
+						 SND_PCM_STREAM_PLAYBACK,
+						 0);
   if (err < 0) {
     LOG(ERROR) << "Error opening pcm stream: " << snd_strerror(err);
     pcm_handle_ = nullptr;
