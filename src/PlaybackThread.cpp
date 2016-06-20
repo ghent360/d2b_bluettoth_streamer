@@ -12,7 +12,6 @@
 #include "AudioMixer.h"
 
 #include <glog/logging.h>
-#include <sched.h>
 #include <sys/select.h>
 #include <unistd.h>
 
@@ -90,11 +89,6 @@ void PlaybackThread::start() {
 
 void* PlaybackThread::threadProc(void *ctx) {
   PlaybackThread* pThis = reinterpret_cast<PlaybackThread*>(ctx);
-  struct sched_param proprity;
-  proprity.__sched_priority = 98;
-  if (sched_setscheduler(0, SCHED_RR, &proprity) < 0) {
-	LOG(ERROR) << "Unable to set the playback thread priority " << errno;
-  }
   pThis->run();
   return NULL;
 }

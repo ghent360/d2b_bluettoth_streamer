@@ -12,9 +12,12 @@
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
-#include <sched.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 DEFINE_string(audio_output, "default", "Name of the audio output device.");
+DEFINE_bool(dbg_audio_output, false, "Write audio output to a file for debugging.");
 
 namespace iqurius {
 
@@ -50,7 +53,8 @@ AudioMixer::AudioMixer(size_t num_channels)
     thread_(),
     num_channels_(num_channels),
     channels_(nullptr),
-    pcm_handle_(nullptr) {
+    pcm_handle_(nullptr),
+	dbg_handle_(-1) {
   CHECK(num_channels > 0);
   channels_ = new AudioChannel*[num_channels_];
   for (size_t idx = 0; idx < num_channels_; ++idx) {
@@ -85,6 +89,10 @@ void AudioMixer::stop() {
   if (pcm_handle_) {
     snd_pcm_close(pcm_handle_);
     pcm_handle_ = nullptr;
+  }
+  if (dbg_handle_ >= 0) {
+	  close(dbg_handle_);
+	  dbg_handle_ = -1;
   }
 }
 
@@ -123,16 +131,15 @@ void AudioMixer::start() {
       running_ = true;
     }
   }
+  if (FLAGS_dbg_audio_output) {
+	if (dbg_handle_ < 0) {
+	  dbg_handle_ = open("/tmp/audio.raw", O_RDWR | O_CREAT | O_TRUNC, 0666);
+	}
+  }
 }
 
 void* AudioMixer::threadProc(void *ctx) {
   AudioMixer* pThis = reinterpret_cast<AudioMixer*>(ctx);
-  struct sched_param proprity;
-  proprity.__sched_priority = 99;
-  if (sched_setscheduler(0, SCHED_RR, &proprity) < 0) {
-	LOG(ERROR) << "Unable to set the audio mixer priority " << errno;
-  }
-
   pThis->run();
   return NULL;
 }
@@ -262,6 +269,9 @@ void AudioMixer::playPcm(const uint8_t* buffer, size_t size) {
   size /= 4;
   while (size > 0) {
     frames = snd_pcm_writei(pcm_handle_, buffer, size);
+    if (dbg_handle_ >= 0) {
+      int ret = write(dbg_handle_, buffer, size * 4);
+    }
     if (frames < 0) {
       frames = snd_pcm_recover(pcm_handle_, frames, 0);
     }
@@ -270,6 +280,7 @@ void AudioMixer::playPcm(const uint8_t* buffer, size_t size) {
       break;
     }
     size -= frames;
+    buffer += frames * 4;
   }
 }
 

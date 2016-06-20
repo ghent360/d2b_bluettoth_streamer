@@ -173,7 +173,7 @@ public:
 
 	AudioChannel* getAudioChannel(size_t channel_no);
 
-	static constexpr size_t AUDIO_BUFFER_SIZE = 4*441;  // 100ms
+	static constexpr size_t AUDIO_BUFFER_SIZE = 4*4410;  // 100ms
 protected:
 	void playPcm(const uint8_t* buffer, size_t size);
 
@@ -190,6 +190,7 @@ private:
 	size_t num_channels_;
 	AudioChannel** channels_;
 	snd_pcm_t *pcm_handle_;
+	int dbg_handle_;
 	DISALLOW_COPY_AND_ASSIGN(AudioMixer);
 };
 

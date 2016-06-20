@@ -89,16 +89,16 @@ void SoundQueue::run() {
 
 void SoundQueue::FragmentInfo::playFragment(AudioChannel* channel) {
   if (!fragment_) {
-	  fragment_ = SoundFragment::fromVorbisFile(fragment_path_.c_str());
+	fragment_ = SoundFragment::fromVorbisFile(fragment_path_.c_str());
   }
   if (!fragment_) {
-	  LOG(ERROR) << "Unable to load audio fragment " << fragment_path_;
-	  repeat_num_ = 0;
-	  return;
+	LOG(ERROR) << "Unable to load audio fragment " << fragment_path_;
+	repeat_num_ = 0;
+	return;
   }
   fragment_->playFragment(channel);
   if (repeat_num_)
-	  repeat_num_--;
+	repeat_num_--;
 }
 
 SoundQueue::FragmentInfo::~FragmentInfo() {
