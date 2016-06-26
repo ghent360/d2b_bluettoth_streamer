@@ -1,4 +1,4 @@
-AC_INIT([bt-a2dp], [1.3.4f], [veffremov.ve@gmail.com])
+AC_INIT([bt-a2dp], [1.3.5], [veffremov.ve@gmail.com])
 AC_CONFIG_MACRO_DIR([m4])
 AC_USE_SYSTEM_EXTENSIONS
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
