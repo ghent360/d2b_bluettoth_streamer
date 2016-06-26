@@ -810,6 +810,7 @@ public:
 		iqurius::RemoveTimerCallback(discoverable_proc_token);
 
 		sound_queue_.waitQueueEmpty();
+		mixer_.getAudioChannel(1)->waitForIdle();
 		int rc = system("/usr/sbin/shutdown -h now");
 		if (rc) {
 		    LOG(ERROR) << "shutdown returned " << rc;

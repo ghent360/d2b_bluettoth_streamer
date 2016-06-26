@@ -95,7 +95,9 @@ private:
 
 class AudioChannel {
 public:
-	AudioChannel(size_t audio_buffer_size) : volume_(0x100) {
+	static constexpr size_t NUM_AUDIO_BUFFERS = 10;
+
+	AudioChannel(size_t audio_buffer_size) : volume_(0x100), idle_(true) {
 	  for (size_t idx = 0; idx < NUM_AUDIO_BUFFERS; ++idx) {
 		AudioBuffer* audio_buffer = new AudioBuffer(audio_buffer_size);
 		free_audio_buffers_.enqueue(audio_buffer);
@@ -139,6 +141,7 @@ public:
 	AudioBuffer* pullBuffer() {
 	  AudioBuffer* audio_buffer = nullptr;
 	  audio_buffers_.dequeue(&audio_buffer);
+	  idle_ = audio_buffer == nullptr;
       return audio_buffer;
 	}
 
@@ -151,15 +154,23 @@ public:
 		LOG(ERROR) << "Attempting to post a null buffer.";
 		return false;
 	  }
+	  idle_ = false;
 	  return audio_buffers_.enqueue(audio_buffer);
 	}
 
-private:
-	static constexpr size_t NUM_AUDIO_BUFFERS = 10;
+	void waitForIdle() {
+	  int max_wait_cnt = 0;
+	  while (!idle_ && max_wait_cnt < 10) {  // Max wait 1s
+		usleep(100000);  // 100ms
+		max_wait_cnt++;
+	  }
+	}
 
+private:
 	FFRingBuffer<AudioBuffer, NUM_AUDIO_BUFFERS> free_audio_buffers_;
 	FFRingBuffer<AudioBuffer, NUM_AUDIO_BUFFERS> audio_buffers_;
 	int16_t volume_;
+	volatile bool idle_;
 	DISALLOW_COPY_AND_ASSIGN(AudioChannel);
 };
 
@@ -170,6 +181,7 @@ public:
 
 	void start();
 	void stop();
+	void waitForIdle();
 
 	AudioChannel* getAudioChannel(size_t channel_no);
 
@@ -185,6 +197,7 @@ private:
 
 	bool running_;
 	bool signal_stop_;
+	volatile bool idle_;
 	pthread_t thread_;
 
 	size_t num_channels_;

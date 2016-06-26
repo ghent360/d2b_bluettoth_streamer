@@ -54,7 +54,8 @@ AudioMixer::AudioMixer(size_t num_channels)
     num_channels_(num_channels),
     channels_(nullptr),
     pcm_handle_(nullptr),
-	dbg_handle_(-1) {
+	dbg_handle_(-1),
+	idle_(true) {
   CHECK(num_channels > 0);
   channels_ = new AudioChannel*[num_channels_];
   for (size_t idx = 0; idx < num_channels_; ++idx) {
@@ -127,6 +128,7 @@ void AudioMixer::start() {
       pcm_handle_ = nullptr;
     } else {
       signal_stop_ = false;
+      idle_ = true;
       pthread_create(&thread_, NULL, threadProc, this);
       running_ = true;
     }
@@ -172,7 +174,10 @@ void AudioMixer::run() {
     // Home heuristic optimizations
     if (num_mix_channels == 0) {  // Nothing to mix, play silence
       play_buffer = SILENCE;
+      idle_ = true;
+      //LOG(INFO) << "Mix silence";
     } else if (num_mix_channels == 1) { // Only one channel
+      idle_ = false;
       int16_t* mixed_samples = (int16_t *)mix_buffer.getData();
       int16_t* buffer_samples = (int16_t *)mix_list[0]->getData();
       size_t buffer_len = mix_list[0]->getDataLen() / 2;
@@ -191,6 +196,7 @@ void AudioMixer::run() {
       }
       play_buffer = &mix_buffer;
     } else if (num_mix_channels == 2) { // Two channels
+      idle_ = false;
       int16_t* mixed_samples = (int16_t *)mix_buffer.getData();
       size_t buffer_len1 = mix_list[0]->getDataLen() / 2;
       size_t buffer_len2 = mix_list[1]->getDataLen() / 2;
@@ -234,6 +240,7 @@ void AudioMixer::run() {
       }
       play_buffer = &mix_buffer;
     } else {  // Generic N channel mix
+      idle_ = false;
       int16_t* mixed_samples = (int16_t *)mix_buffer.getData();
       for (int sample_no = 0; sample_no < mix_buffer_len; ++sample_no) {
         int32_t sample = 0;
@@ -281,6 +288,14 @@ void AudioMixer::playPcm(const uint8_t* buffer, size_t size) {
     }
     size -= frames;
     buffer += frames * 4;
+  }
+}
+
+void AudioMixer::waitForIdle() {
+  int max_wait_cnt = 0;
+  while (!idle_ && max_wait_cnt < 50) {  // Max wait 5s
+	usleep(100000);  // 100ms
+	max_wait_cnt++;
   }
 }
 

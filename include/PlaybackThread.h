@@ -11,16 +11,12 @@
 #ifndef PLAYBACKTHREAD_H_
 #define PLAYBACKTHREAD_H_
 
+#include "AudioMixer.h"
 #include "MediaTransport.h"
 #include "util.h"
 
 #include <soxr.h>
 #include <pthread.h>
-
-namespace iqurius {
-class AudioChannel;
-class AudioBuffer;
-}
 
 namespace dbus {
 
@@ -57,6 +53,8 @@ private:
   iqurius::AudioBuffer* waitForFreeBuffer();
   void freeTransport();
   bool acqureTransport();
+  void postBuffer(iqurius::AudioBuffer*);
+  void flush();
 
   bool running_;
   bool signal_stop_;
@@ -72,6 +70,10 @@ private:
   uint8_t* audo_channel_buffer_;
   size_t audo_buffer_len_;
   soxr_t resampler_;
+  bool in_preroll_;
+  static constexpr int preroll_size_ = iqurius::AudioChannel::NUM_AUDIO_BUFFERS - 4;
+  iqurius::AudioBuffer* preroll_[preroll_size_];
+  size_t preroll_filled_;
 
   static void* threadProc(void *);
   void run();
