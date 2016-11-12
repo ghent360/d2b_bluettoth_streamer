@@ -8,8 +8,6 @@
  * All rights reserved.
  */
 
-#include "AacDecodeThread.h"
-#include "AacMediaEndpoint.h"
 #include "AudioMixer.h"
 #include "AudioSource.h"
 #include "AudioTargetControl.h"
@@ -27,7 +25,6 @@
 #include "ObjectPath.h"
 #include "SbcDecodeThread.h"
 #include "SbcMediaEndpoint.h"
-#include "Serial.h"
 #include "SoundFragment.h"
 #include "SoundManager.h"
 #include "SoundQueue.h"
@@ -48,7 +45,6 @@ DEFINE_string(command_file, "/dev/ttyAMA0",
 		"File or FIFO where to read commands and write status to.");
 
 static const char* A2DP_UUID = "0000110a-0000-1000-8000-00805f9b34fb";
-static const char* SPP_UUID  = "00001101-0000-1000-8000-00805f9b34fb";
 
 class MyAudioSource : public dbus::AudioSource {
 public:
@@ -140,7 +136,6 @@ public:
         : adapter_(NULL),
 		  agent_(NULL),
 		  sbc_media_endpoint_(NULL),
-		  aac_media_endpoint_(NULL),
 		  adapter_media_interface_(NULL),
 		  playback_thread_(NULL),
 		  reconnect_token_(0),
@@ -149,10 +144,7 @@ public:
 		  mixer_(2),
 		  sound_queue_(mixer_.getAudioChannel(1), mixer_.getAudioChannel(0)),
 		  command_parser_(FLAGS_command_file),
-		  phone_connected_(false),
-		  serial_(NULL)/*,
-		  text_screen_(googleapis::NewPermanentCallback(this,
-				  &Application::onScreenDisconnect)) */ {
+		  phone_connected_(false) {
 	}
 
 	virtual ~Application() {
@@ -222,21 +214,18 @@ public:
 			adapter_->refreshProperties();
 			for (dbus::ObjectPath device_path : adapter_->getDevices()) {
 				MyAudioSource* audio_src = findAudioSource(device_path);
-				dbus::BluezDevice device(&conn_, device_path);
-				dbus::DictionaryHelper* properties = NULL;
-				device.GetProperties(&properties);
-				if (properties) {
-					auto services = properties->getArray("UUIDs");
-					if (supports(services, A2DP_UUID) && audio_src == NULL) {
-						audio_src = createAudioSource(device_path);
-					}
-					/*if (supports(services, SPP_UUID) && serial_ == NULL) {
-						if (supports(services, SPP_UUID)) {
-							connectSerialPort(device_path);
+				if (!audio_src) {
+					dbus::BluezDevice device(&conn_, device_path);
+					dbus::DictionaryHelper* properties = NULL;
+					device.GetProperties(&properties);
+					if (properties) {
+						auto services = properties->getArray("UUIDs");
+						if (supports(services, A2DP_UUID) && audio_src == NULL) {
+							audio_src = createAudioSource(device_path);
 						}
-					}*/
+					}
+					delete properties;
 				}
-				delete properties;
 				if (FLAGS_autoconnect && audio_src) {
 					audio_src->connectAsync();
 				}
@@ -321,20 +310,6 @@ public:
 			LOG(INFO) << "Started SBC playback thread.";
 			return;
 		}
-		if (aac_media_endpoint_ &&
-		    aac_media_endpoint_->isTransportConfigValid() &&
-			(!playback_thread_ ||
-			 !playback_thread_->ok() ||
-			 playback_thread_->codecId() != dbus::PlaybackThread::E_AAC)) {
-			stopPlayback();
-			playback_thread_ = new dbus::AacDecodeThread(&conn_,
-					aac_media_endpoint_->getTransportPath(),
-					mixer_.getAudioChannel(0),
-					aac_media_endpoint_->getSamplingRate());
-			playback_thread_->start();
-			LOG(INFO) << "Started ACC playback thread.";
-			return;
-		}
 	}
 
 	void delayedPlaybackStatusCheck() {
@@ -348,10 +323,6 @@ public:
 	    switch (value) {
 	    case dbus::AudioSource::State::PLAYING:
 	    	if (sbc_media_endpoint_ && sbc_media_endpoint_->isTransportConfigValid()) {
-	    		startPlayback();
-		    	command_parser_.sendStatus("@&PLAY\n");
-	    	}
-	    	if (aac_media_endpoint_ && aac_media_endpoint_->isTransportConfigValid()) {
 	    		startPlayback();
 		    	command_parser_.sendStatus("@&PLAY\n");
 	    	}
@@ -457,46 +428,15 @@ public:
 					audio_src->connectAsync();
 					sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
 							iqurius::SoundManager::SOUND_CORRECT));
+				} else {
+					LOG(WARNING) << "Device " << device_path << " is not an audio player";
 				}
-				/*if (supports(services, SPP_UUID)) {
-					connectSerialPort(device_path);
-				}*/
+			} else {
+				LOG(WARNING) << "Can't fetch properties for " << device_path;
 			}
 			delete properties;
 		}
 	}
-
-	void onDeviceFound(const char* device_address,
-			dbus::BaseMessageIterator* properties) {
-		dbus::DictionaryHelper dict(properties);
-		bool is_paired = dict.getBool("Paired");
-		if (!is_paired) {
-			dict.dump("device properties:");
-			const char* device_name = dict.getString("Name");
-			uint32_t device_class = dict.getUint32("Class");
-			if (device_class == 0x1F00 &&
-				strncmp(device_name, "iQuryus Screen", 14) == 0) {
-				LOG(INFO) << "Found screen " << device_name
-						<< "(" << device_address << ")";
-				dbus::SimpleBluezAgent* agent = new dbus::SimpleBluezAgent(&conn_, 2015);
-				conn_.addObject(agent);
-
-				adapter_->createPairedDevice(device_address, agent);
-				adapter_->stopDiscovery();
-				sound_queue_.scheduleFragment(sound_manager_.getSoundPath(
-						iqurius::SoundManager::SOUND_CORRECT));
-			}
-		}
-	}
-
-	/*void onScreenDisconnect() {
-		serial_->disconnect(serial_port_path_.c_str());
-		conn_.removeObject(serial_);
-		serial_ = NULL;
-		serial_port_path_.clear();
-		iqurius::PostDelayedCallback(500, googleapis::NewCallback(this,
-				&Application::enumerateBluetoothDevices));
-	}*/
 
 	void doUpdate() {
 		if (updater_.CheckUpdateAvailable()) {
@@ -629,59 +569,34 @@ public:
 		update_checker_token_ = 0;
 	}
 
-	/*void onSerialConnectResult(dbus::Message* msg) {
-		if (msg && msg->getType() == DBUS_MESSAGE_TYPE_METHOD_RETURN) {
-		  dbus::MessageArgumentIterator iter = msg->argIterator();
-		  if (iter.hasArgs()) {
-			serial_port_path_.assign(iter.getString());
-			LOG(INFO) << "Connected serial port " << serial_port_path_;
-			iqurius::PostDelayedCallback(250, googleapis::NewCallback(&text_screen_,
-					&iqurius::TextScreen::open, serial_port_path_.c_str()));
-		  }
-		} else {
-		  msg->dump("onSerialConnectResult:");
-		}
-	}*/
-
 	void updateScreenData() {
 		MyAudioSource* connected_source = sourceConnected();
 		if (connected_source &&
 			connected_source->getState() == dbus::AudioSource::State::PLAYING) {
 			auto* control = connected_source->getTargetControl();
-			if (!control->getConnected()) return;
+			if (!control->getConnected()) {
+				//LOG(INFO) << "No AVRCP connection";
+				return;
+			}
 			control->updatePlayStatus();
 			control->updateMetadata();
 			int track_no = control->getTrackNo();
-			int sond_pos = control->getSongPos() / 1000;
-			/*text_screen_.setTitle(control->getTitle());
-			text_screen_.setAlbum(control->getAlbum());
-			text_screen_.setArtist(control->getArtist());
-			text_screen_.setTrackNo(track_no);
-			text_screen_.setPlayTime(sond_pos);*/
+			int song_pos = control->getSongPos() / 1000;
 
+			LOG(INFO) << "Track " << track_no << " pos " << song_pos;
 			if (track_no > 0) {
 				std::string track = googleapis::StringPrintf("@&TR%02d\n",
 						track_no % 100);
 				command_parser_.sendStatus(track.c_str());
 			}
 			std::string time = googleapis::StringPrintf("@&%02d%02d\n",
-					(sond_pos / 100) % 100,  // Minutes
-					(sond_pos) % 100);       // Seconds
+					(song_pos / 100) % 100,  // Minutes
+					(song_pos) % 100);       // Seconds
 			command_parser_.sendStatus(time.c_str());
+		} else {
+			//LOG(INFO) << "No audo source or not playing.";
 		}
 	}
-
-	/*void connectSerialPort(const dbus::ObjectPath& device_path) {
-		if (serial_) {
-			conn_.removeObject(serial_);
-			serial_ = NULL;
-			serial_port_path_.clear();
-		}
-		serial_ = new dbus::Serial(&conn_, device_path);
-		conn_.addObject(serial_);
-		serial_->connectAsync("spp", -1, googleapis::NewCallback(this,
-				&Application::onSerialConnectResult));
-	}*/
 
 	void connectToBluetoothAdapter() {
 		if (adapter_) {
@@ -698,13 +613,11 @@ public:
 		adapter_ = new dbus::BluezAdapter(&conn_, adapter_path);
 		conn_.addObject(adapter_);
 
-		adapter_->setName("iQuryus JSync V3");
+		adapter_->setName("iQuryus JSync V3 Dbg");
+		stopDiscoverable();
 		adapter_->setDeviceCreatedCallback(
 			googleapis::NewPermanentCallback(this,
 				&Application::onDeviceCreated));
-		adapter_->setDeviceFoundCallback(
-			googleapis::NewPermanentCallback(this,
-				&Application::onDeviceFound));
 
 		agent_ = new dbus::SimpleBluezAgent(&conn_, 2015);
 		conn_.addObject(agent_);
@@ -712,17 +625,6 @@ public:
 
 		adapter_media_interface_ = new dbus::BluezMedia(&conn_,
 				adapter_path);
-#if 0
-		aac_media_endpoint_ = new dbus::AacMediaEndpoint();
-		conn_.addObject(aac_media_endpoint_);
-		if (!adapter_media_interface_->registerEndpoint(
-				*aac_media_endpoint_)) {
-			LOG(ERROR) << "Unable to register the A2DP sync. Check if bluez \n"
-				"has audio support and the configuration is enabled.";
-			conn_.removeObject(aac_media_endpoint_);
-			aac_media_endpoint_ = NULL;
-		}
-#endif
 		sbc_media_endpoint_ = new dbus::SbcMediaEndpoint();
 		conn_.addObject(sbc_media_endpoint_);
 		if (!adapter_media_interface_->registerEndpoint(
@@ -829,18 +731,11 @@ public:
 			if (sbc_media_endpoint_) {
 				adapter_media_interface_->unregisterEndpoint(*sbc_media_endpoint_);
 			}
-			if (aac_media_endpoint_) {
-				adapter_media_interface_->unregisterEndpoint(*aac_media_endpoint_);
-			}
 			delete adapter_media_interface_;
 		}
 		if (sbc_media_endpoint_) {
 			conn_.removeObject(sbc_media_endpoint_);
 			sbc_media_endpoint_ = NULL;
-		}
-		if (aac_media_endpoint_) {
-			conn_.removeObject(aac_media_endpoint_);
-			aac_media_endpoint_ = NULL;
 		}
 		if (agent_) {
 			adapter_->unregisterAgent(agent_);
@@ -871,7 +766,6 @@ private:
 	dbus::BluezAdapter* adapter_;
 	dbus::BluezAgent* agent_;
 	dbus::SbcMediaEndpoint* sbc_media_endpoint_;
-	dbus::AacMediaEndpoint* aac_media_endpoint_;
 	dbus::BluezMedia* adapter_media_interface_;
 	dbus::PlaybackThread* playback_thread_;
 	uint32_t reconnect_token_;
@@ -884,9 +778,6 @@ private:
 	std::list<MyAudioSource*> audio_sources_;
 	CommandParser command_parser_;
 	bool phone_connected_;
-	dbus::Serial* serial_;
-	std::string serial_port_path_;
-	//iqurius::TextScreen text_screen_;
 };
 
 int main(int argc, char *argv[]) {
