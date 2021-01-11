@@ -1,1 +1,10 @@
 Bluetooth A2DP sink demon.
+
+This is a service that runs on a Raspberry Pi zero. It manages phone pairing and audio
+streaming via Bluetooth. There is a voice feedback interface via pre recorded files
+in ogg format. The service does audio mixing and sample rate conversion to 44.1kHz output.
+
+The code is designed to run with a companion Raspberry Pi HAT device tha communicates
+with the car's D2B bus and sends control commands to the service.
+
+For more details on the hardware see https://blog.pcbxprt.com/index.php/2019/07/29/jaguar-d2b-cd-changer-details/
